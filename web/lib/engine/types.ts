@@ -1,6 +1,7 @@
 export type Period = "daily" | "weekly" | "monthly";
 
 export interface CalEvent {
+  id?: string;
   title: string;
   start: Date;
   end: Date;
