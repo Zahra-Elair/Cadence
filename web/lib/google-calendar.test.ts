@@ -61,12 +61,9 @@ describe("createEvent", () => {
       title: "Lunch", start: "2026-09-25T13:00:00+01:00", end: "2026-09-25T14:00:00+01:00",
     });
     expect(res.id).toBe("new1");
-    const calls = fetchMock.mock.calls as unknown[];
-    if (calls.length > 0) {
-      const [url, init] = calls[0] as unknown[];
-      expect(String(url)).toContain("/calendars/primary/events");
-      expect((init as unknown as RequestInit).method).toBe("POST");
-    }
+    const [url, init] = (fetchMock.mock.calls as any[])[0];
+    expect(String(url)).toContain("/calendars/primary/events");
+    expect((init as RequestInit).method).toBe("POST");
     vi.unstubAllGlobals();
   });
 
@@ -85,11 +82,7 @@ describe("updateEvent / deleteEvent", () => {
     vi.stubGlobal("fetch", fetchMock);
     const res = await updateEvent("tok", "e1", { title: "New" });
     expect(res.id).toBe("e1");
-    const calls = fetchMock.mock.calls as unknown[];
-    if (calls.length > 0) {
-      const [, init] = calls[0] as unknown[];
-      expect((init as unknown as RequestInit).method).toBe("PATCH");
-    }
+    expect(((fetchMock.mock.calls as any[])[0][1] as RequestInit).method).toBe("PATCH");
     vi.unstubAllGlobals();
   });
 
@@ -97,11 +90,7 @@ describe("updateEvent / deleteEvent", () => {
     const fetchMock = vi.fn(async () => ({ ok: true, status: 204 } as unknown as Response));
     vi.stubGlobal("fetch", fetchMock);
     await expect(deleteEvent("tok", "e1")).resolves.toBeUndefined();
-    const calls = fetchMock.mock.calls as unknown[];
-    if (calls.length > 0) {
-      const [, init] = calls[0] as unknown[];
-      expect((init as unknown as RequestInit).method).toBe("DELETE");
-    }
+    expect(((fetchMock.mock.calls as any[])[0][1] as RequestInit).method).toBe("DELETE");
     vi.unstubAllGlobals();
   });
 });
