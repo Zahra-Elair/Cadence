@@ -41,6 +41,19 @@ describe("runTurn", () => {
     expect(cal.listEvents).not.toHaveBeenCalled();
   });
 
+  it("does not call listEvents for an unknown tool name and lets the loop continue", async () => {
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce({ text: null, functionCall: { name: "weather", args: {} } })
+      .mockResolvedValueOnce({ text: "I can't check the weather, but here's your schedule help.", functionCall: null });
+    const cal = { listEvents: vi.fn() };
+    const res = await runTurn([userMsg("what's the weather?")], generate, cal);
+    expect(cal.listEvents).not.toHaveBeenCalled();
+    expect(res.kind).toBe("reply");
+    if (res.kind === "reply") expect(res.reply).toContain("weather");
+    expect(generate).toHaveBeenCalledTimes(2);
+  });
+
   it("feeds an invalid-write error back to the model instead of confirming", async () => {
     const generate = vi
       .fn()

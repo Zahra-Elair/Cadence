@@ -44,13 +44,18 @@ async function loop(history: ChatContent[], generate: GenerateFn, cal: CalendarO
         };
       }
 
-      // read tool
-      try {
-        const result = await cal.listEvents(args as { timeMin: string; timeMax: string });
-        contents = [...contents, toolResult(name, { events: result })];
-      } catch (err) {
-        contents = [...contents, toolResult(name, { error: (err as Error).message })];
+      if (name === "list_events") {
+        try {
+          const result = await cal.listEvents(args as { timeMin: string; timeMax: string });
+          contents = [...contents, toolResult(name, { events: result })];
+        } catch (err) {
+          contents = [...contents, toolResult(name, { error: (err as Error).message })];
+        }
+        continue;
       }
+
+      // unknown tool name — don't guess at intent, let the model recover
+      contents = [...contents, toolResult(name, { error: `Unknown tool: ${name}` })];
       continue;
     }
 

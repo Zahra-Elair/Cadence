@@ -43,14 +43,22 @@ export function ChatClient() {
   async function onConfirm() {
     if (!pending) return;
     setBusy(true);
-    apply(await confirmWrite(history, pending, zone));
+    const res = await confirmWrite(history, pending, zone);
+    setPending(null); // always clear the card after a confirm attempt
     setBusy(false);
+    if (!res.ok) { setError(res.error); return; }
+    setError(null);
+    setHistory(res.history);
   }
   async function onCancel() {
     if (!pending) return;
     setBusy(true);
-    apply(await declineWrite(history, pending, zone));
+    const res = await declineWrite(history, pending, zone);
+    setPending(null); // always clear the card after a decline attempt
     setBusy(false);
+    if (!res.ok) { setError(res.error); return; }
+    setError(null);
+    setHistory(res.history);
   }
 
   const bubbles = bubblesFrom(history);
