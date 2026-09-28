@@ -1,6 +1,6 @@
-import { Type } from "@google/genai";
+import { Type, type FunctionDeclaration } from "@google/genai";
 
-export const toolDeclarations = [
+export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "list_events",
     description: "List the user's calendar events between two ISO 8601 datetimes. Use this to check the schedule or find an event's id before updating or deleting it.",
