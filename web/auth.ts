@@ -12,7 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         params: {
           scope:
-            "openid email profile https://www.googleapis.com/auth/calendar.readonly",
+            "openid email profile https://www.googleapis.com/auth/calendar.events",
           // offline access makes Google issue a refresh token (with prompt
           // "consent" below), so the server can silently renew the short-lived
           // access token instead of forcing the user to sign in every ~hour.
@@ -36,7 +36,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Record whether the user actually granted the calendar scope
         // (Google lets them decline it on the consent screen — granular consent).
         token.calendarGranted = (account.scope ?? "").includes(
-          "https://www.googleapis.com/auth/calendar.readonly",
+          "https://www.googleapis.com/auth/calendar.events",
         );
       }
       return token;
