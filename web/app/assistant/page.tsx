@@ -3,39 +3,31 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { SignInButton } from "@/components/SignInButton";
 import { SignOutButton } from "@/components/SignOutButton";
-import { DashboardClient } from "@/components/DashboardClient";
+import { ChatClient } from "@/components/ChatClient";
 
-export default async function Dashboard() {
+export default async function AssistantPage() {
   const session = await auth();
   if (!session) redirect("/");
-
-  // The user is signed in but declined the calendar permission on Google's
-  // consent screen — prompt them to grant it before showing the dashboard.
   if (session.calendarGranted === false) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 p-6 text-center">
         <h1 className="text-2xl font-bold">Calendar access needed</h1>
-        <p className="text-gray-600">
-          This app needs read access to your Google Calendar to summarize it.
-          Please sign in again and allow the calendar permission.
-        </p>
+        <p className="text-gray-600">The assistant needs read+write access to your Google Calendar. Please sign in again and allow it.</p>
         <SignInButton />
         <SignOutButton />
       </main>
     );
   }
-
   return (
     <main className="mx-auto max-w-2xl p-6">
-      <header className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Your calendar summary</h1>
+      <header className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Calendar assistant</h1>
         <div className="flex items-center gap-3 text-sm text-gray-600">
-          <span>{session.user?.name}</span>
-          <Link href="/assistant" className="hover:text-black">Assistant</Link>
+          <Link href="/dashboard" className="hover:text-black">Summary</Link>
           <SignOutButton />
         </div>
       </header>
-      <DashboardClient />
+      <ChatClient />
     </main>
   );
 }
