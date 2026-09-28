@@ -38,6 +38,7 @@ describe("runTurn", () => {
       expect(res.pending.tool).toBe("create_event");
       expect(res.pending.summary).toContain("Lunch");
     }
+    expect(cal.listEvents).not.toHaveBeenCalled();
   });
 
   it("feeds an invalid-write error back to the model instead of confirming", async () => {
