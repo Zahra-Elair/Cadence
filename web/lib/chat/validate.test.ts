@@ -27,4 +27,12 @@ describe("validateWriteArgs", () => {
     expect(validateWriteArgs("update_event", { eventId: "e1", start: "2026-09-25T14:00:00Z", end: "2026-09-25T13:00:00Z" }).ok).toBe(false);
     expect(validateWriteArgs("update_event", { eventId: "e1", title: "New" })).toEqual({ ok: true });
   });
+  it("requires eventId for update_event", () => {
+    expect(validateWriteArgs("update_event", { title: "New" }).ok).toBe(false);
+  });
+  it("accepts update_event with a valid start/end pair", () => {
+    expect(validateWriteArgs("update_event", {
+      eventId: "e1", start: "2026-09-25T13:00:00+01:00", end: "2026-09-25T14:00:00+01:00",
+    })).toEqual({ ok: true });
+  });
 });
