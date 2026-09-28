@@ -1,7 +1,9 @@
-# Calendar Summarizer — Web (Phase 2)
+# Calendar Summarizer — Web (Phase 3)
 
 Sign in with Google and get an AI summary of your real Google Calendar
-(daily / weekly / monthly), powered by the free tier of Google Gemini.
+(daily / weekly / monthly), powered by the free tier of Google Gemini. Chat with your calendar — ask questions, create events, update or delete them.
+
+**Permissions:** Requires read and write access to your Google Calendar.
 
 ## Setup
 
@@ -20,6 +22,19 @@ Sign in with Google and get an AI summary of your real Google Calendar
 
 > Note: while the OAuth app is unverified, only accounts added as **Test users**
 > can sign in, and they will see an "unverified app" warning.
+
+## Assistant (chat)
+
+Open **Assistant** from the dashboard header. Ask it in plain language, e.g.:
+- "What's on my calendar Thursday?"
+- "Add lunch with Sam Thursday at 1pm"
+- "Move my 3pm to 4pm" / "Delete the dentist appointment"
+
+Reads run automatically; any change (create/update/delete) shows a confirmation
+card and only happens when you click **Confirm**.
+
+> Requires the read+write calendar scope — existing users sign in again once to
+> grant it.
 
 ## Tests
 
