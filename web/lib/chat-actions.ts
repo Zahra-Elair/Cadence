@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import { auth } from "@/auth";
 import { getGoogleAccessToken } from "./auth-token";
 import { toolDeclarations } from "./chat/tools";
+import { validateWriteArgs } from "./chat/validate";
 import type { ChatContent, PendingWrite } from "./chat/types";
 import {
   runTurn, continueAfterToolResult, type GenerateFn, type CalendarOps, type TurnResult,
@@ -94,15 +95,21 @@ export async function sendChatMessage(history: ChatContent[], timeZone: string):
 
 export async function confirmWrite(history: ChatContent[], pending: PendingWrite, timeZone: string): Promise<ChatResult> {
   return withContext(timeZone, async (generate, cal, token) => {
+    const check = validateWriteArgs(pending.tool, pending.args);
+    if (!check.ok) {
+      return { ok: false, error: `Couldn't apply that change: ${check.error}.` };
+    }
     const a = pending.args as Record<string, string>;
     let response: Record<string, unknown>;
     if (pending.tool === "create_event") {
       response = await createEvent(token, { title: a.title, start: a.start, end: a.end, location: a.location, description: a.description });
     } else if (pending.tool === "update_event") {
       response = await updateEvent(token, a.eventId, { title: a.title, start: a.start, end: a.end, location: a.location, description: a.description });
-    } else {
+    } else if (pending.tool === "delete_event") {
       await deleteEvent(token, a.eventId);
       response = { deleted: true };
+    } else {
+      return { ok: false, error: "Unsupported action." };
     }
     return toResult(await continueAfterToolResult(history, pending.tool, response, generate, cal));
   });
