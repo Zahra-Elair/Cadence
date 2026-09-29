@@ -11,3 +11,6 @@ web/node_modules/
 web/.next/
 web/.env.local
 web/coverage/
+
+# Superpowers SDD scratch workspace (ledgers, briefs, reports)
+.superpowers/
