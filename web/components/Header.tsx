@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarClock } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "./ThemeToggle";
-import { SignOutButton } from "./SignOutButton";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
@@ -44,7 +44,7 @@ export function Header({ user }: { user: { name?: string | null; email?: string 
                 {user.email ?? user.name}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <SignOutButton />
+              <DropdownMenuItem onSelect={() => signOut({ redirectTo: "/" })}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </nav>
