@@ -1,6 +1,7 @@
 "use server";
 
 import type { JSONValue, ModelMessage } from "ai";
+import { DateTime } from "luxon";
 import { auth } from "@/auth";
 import { getGoogleAccessToken } from "./auth-token";
 import { resolveModel, ProviderConfigError } from "./ai/provider";
@@ -18,8 +19,11 @@ export type ChatResult =
   | { ok: false; error: string; needsSignIn?: boolean };
 
 function buildSystem(timeZone: string): string {
+  const now = DateTime.now().setZone(timeZone);
+  const nowStr = now.isValid ? now.toISO() : new Date().toISOString();
   return (
-    `You are a helpful calendar assistant. The user's timezone is ${timeZone} and the current time is ${new Date().toISOString()}. ` +
+    `You are a helpful calendar assistant. The user's timezone is ${timeZone} and the current local time is ${nowStr}. ` +
+    `Times returned by list_events are already in the user's timezone — read and display them as-is; never shift them by the offset yourself. ` +
     `Resolve relative dates (e.g. "Thursday 1pm") to concrete ISO 8601 datetimes WITH the user's timezone offset. ` +
     `Use the recent conversation to fill in an unspecified day — e.g. if the user was just discussing tomorrow and then says "add X at 5pm", assume tomorrow. ` +
     `If the intended day is genuinely ambiguous, or the requested time is already in the past, ask a short clarifying question instead of guessing. ` +
@@ -61,7 +65,7 @@ async function withContext(
   const token = await getGoogleAccessToken();
   if (!token) return { ok: false, error: "Your session expired. Please sign in again.", needsSignIn: true };
   try {
-    const deps: TurnDeps = { model: resolveModel(), tools: buildTools(token), system: buildSystem(timeZone) };
+    const deps: TurnDeps = { model: resolveModel(), tools: buildTools(token, timeZone), system: buildSystem(timeZone) };
     return await fn(deps, token);
   } catch (err) {
     return mapError(err);
