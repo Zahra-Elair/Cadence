@@ -23,6 +23,21 @@ describe("validateWriteArgs", () => {
     });
     expect(r.ok).toBe(false);
   });
+  it("create_event: whitespace-only title fails", () => {
+    const r = validateWriteArgs("create_event", {
+      title: "   ", start: "2026-09-25T13:00:00Z", end: "2026-09-25T14:00:00Z",
+    });
+    expect(r.ok).toBe(false);
+  });
+  it("names the offending field in the error", () => {
+    const r = validateWriteArgs("create_event", {
+      title: "", start: "2026-09-25T13:00:00Z", end: "2026-09-25T14:00:00Z",
+    });
+    expect(r).toEqual({ ok: false, error: expect.stringMatching(/^title: /) });
+  });
+  it("unknown / prototype tool names return a clean error", () => {
+    expect(validateWriteArgs("constructor" as never, {})).toEqual({ ok: false, error: "unknown tool: constructor" });
+  });
   it("delete_event: requires eventId", () => {
     expect(validateWriteArgs("delete_event", { eventId: "abc" })).toEqual({ ok: true });
     expect(validateWriteArgs("delete_event", {}).ok).toBe(false);

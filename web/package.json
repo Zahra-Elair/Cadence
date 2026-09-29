@@ -13,7 +13,6 @@
     "@ai-sdk/google": "^4.0.85",
     "@ai-sdk/groq": "^4.0.52",
     "@ai-sdk/mistral": "^4.0.54",
-    "@google/genai": "^2.24.0",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "ai": "^7.0.122",
     "luxon": "^3.7.2",

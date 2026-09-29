@@ -46,8 +46,8 @@ const PROVIDERS: Record<string, ProviderSpec> = {
 };
 
 export function resolveModel(): LanguageModel {
-  const name = process.env.AI_PROVIDER ?? "google";
-  const spec = PROVIDERS[name];
+  const name = process.env.AI_PROVIDER?.trim() || "google";
+  const spec = Object.hasOwn(PROVIDERS, name) ? PROVIDERS[name] : undefined;
   if (!spec) {
     throw new ProviderConfigError(
       "unknown-provider",
@@ -63,6 +63,6 @@ export function resolveModel(): LanguageModel {
       `Missing ${spec.envKey} for AI_PROVIDER "${name}".`,
     );
   }
-  const modelId = process.env.AI_MODEL ?? spec.defaultModel;
+  const modelId = process.env.AI_MODEL?.trim() || spec.defaultModel;
   return spec.make(apiKey, modelId);
 }

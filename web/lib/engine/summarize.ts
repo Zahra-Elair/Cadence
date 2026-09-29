@@ -1,9 +1,10 @@
-import { generateObject, APICallError, RetryError, type LanguageModel } from "ai";
+import { generateObject, type LanguageModel } from "ai";
 import { z } from "zod";
 import type { CalEvent, Period, Summary } from "./types";
 import { buildPrompt } from "./prompt";
 import { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
 import { resolveModel, ProviderConfigError } from "../ai/provider";
+import { isQuota, isOverload } from "../ai/errors";
 
 export { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
 
@@ -20,22 +21,6 @@ function emptySummary(period: Period, startISO: string, endISO: string): Summary
     overview: "Nothing scheduled for this period.",
     keyEvents: [], timeBreakdown: "0h scheduled", highlights: [], empty: true,
   };
-}
-
-function statusOf(err: unknown): number | undefined {
-  // After the SDK's built-in retries are exhausted it wraps the real error in a RetryError.
-  if (RetryError.isInstance(err)) return statusOf(err.lastError);
-  if (APICallError.isInstance(err)) return err.statusCode;
-  return (err as { statusCode?: number; status?: number; code?: number })?.statusCode
-    ?? (err as { status?: number })?.status
-    ?? (err as { code?: number })?.code;
-}
-
-function isOverload(err: unknown): boolean {
-  if (statusOf(err) === 503) return true;
-  if (RetryError.isInstance(err)) return isOverload(err.lastError);
-  const m = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return m.includes("overload") || m.includes("high demand") || m.includes("unavailable");
 }
 
 export async function summarize(
@@ -59,7 +44,7 @@ export async function summarize(
     const { object } = await generateObject({ model, schema: summarySchema, prompt });
     return { period, start: startISO, end: endISO, ...object, empty: false };
   } catch (err: unknown) {
-    if (statusOf(err) === 429) {
+    if (isQuota(err)) {
       throw new QuotaExceededError("Free-tier quota/rate limit reached. Try again shortly.");
     }
     if (isOverload(err)) {

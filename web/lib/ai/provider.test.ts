@@ -24,6 +24,31 @@ describe("resolveModel", () => {
     expect(typeof (model as { modelId?: unknown }).modelId).toBe("string");
   });
 
+  it("uses the google default model id when AI_MODEL is unset", () => {
+    setEnv({ GEMINI_API_KEY: "test-key" });
+    expect((resolveModel() as { modelId: string }).modelId).toBe("gemini-flash-latest");
+  });
+
+  it("AI_MODEL overrides the default model id", () => {
+    setEnv({ GEMINI_API_KEY: "test-key", AI_MODEL: "some-model" });
+    expect((resolveModel() as { modelId: string }).modelId).toBe("some-model");
+  });
+
+  it("empty AI_PROVIDER falls back to google", () => {
+    setEnv({ AI_PROVIDER: "", GEMINI_API_KEY: "test-key" });
+    expect(() => resolveModel()).not.toThrow();
+  });
+
+  it("a prototype key as AI_PROVIDER yields unknown-provider", () => {
+    setEnv({ AI_PROVIDER: "constructor", GEMINI_API_KEY: "x" });
+    try {
+      resolveModel();
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect((err as ProviderConfigError).kind).toBe("unknown-provider");
+    }
+  });
+
   it("throws ProviderConfigError(missing-key) when the selected provider's key is absent", () => {
     setEnv({ AI_PROVIDER: "groq" }); // no GROQ_API_KEY
     try {

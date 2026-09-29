@@ -12,7 +12,7 @@ export const listEventsSchema = z.object({
 
 export const createEventSchema = z
   .object({
-    title: z.string().min(1).describe("Event title."),
+    title: z.string().trim().min(1).describe("Event title."),
     start: isoDateTime.describe("ISO 8601 with offset."),
     end: isoDateTime.describe("ISO 8601 with offset."),
     location: z.string().optional(),
@@ -25,7 +25,7 @@ export const createEventSchema = z
 
 export const updateEventSchema = z
   .object({
-    eventId: z.string().min(1).describe("Id from list_events."),
+    eventId: z.string().trim().min(1).describe("Id from list_events."),
     title: z.string().optional(),
     start: isoDateTime.optional(),
     end: isoDateTime.optional(),
@@ -42,7 +42,7 @@ export const updateEventSchema = z
   );
 
 export const deleteEventSchema = z.object({
-  eventId: z.string().min(1).describe("Id from list_events."),
+  eventId: z.string().trim().min(1).describe("Id from list_events."),
 });
 
 const WRITE_SCHEMAS = {
@@ -55,9 +55,14 @@ export function validateWriteArgs(
   tool: ToolName,
   args: Record<string, unknown>,
 ): { ok: true } | { ok: false; error: string } {
-  const schema = (WRITE_SCHEMAS as Record<string, z.ZodTypeAny>)[tool];
-  if (!schema) return { ok: false, error: `unknown tool: ${tool}` };
+  if (!Object.hasOwn(WRITE_SCHEMAS, tool)) return { ok: false, error: `unknown tool: ${tool}` };
+  const schema: z.ZodTypeAny = WRITE_SCHEMAS[tool as keyof typeof WRITE_SCHEMAS];
   const r = schema.safeParse(args);
   if (r.success) return { ok: true };
-  return { ok: false, error: r.error.issues[0]?.message ?? "invalid arguments" };
+  const issue = r.error.issues[0];
+  if (!issue) return { ok: false, error: "invalid arguments" };
+  return {
+    ok: false,
+    error: issue.path.length > 0 ? `${issue.path.join(".")}: ${issue.message}` : issue.message,
+  };
 }

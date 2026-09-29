@@ -31,7 +31,7 @@ async function loop(messages: ModelMessage[], deps: TurnDeps, correctionsLeft: n
     tools: deps.tools,
     stopWhen: stepCountIs(MAX_STEPS),
   });
-  const nextMessages = [...messages, ...result.response.messages];
+  const nextMessages = [...messages, ...result.responseMessages];
 
   // Reads auto-execute inside generateText. Any tool call still unresolved here
   // is a write (no execute) that stopped the run.
@@ -57,7 +57,7 @@ async function loop(messages: ModelMessage[], deps: TurnDeps, correctionsLeft: n
     return loop(corrected, deps, correctionsLeft - 1);
   }
 
-  return { kind: "reply", messages: nextMessages, reply: result.text ?? "" };
+  return { kind: "reply", messages: nextMessages, reply: result.text || "I couldn't complete that — could you rephrase?" };
 }
 
 export function runTurn(messages: ModelMessage[], deps: TurnDeps): Promise<TurnResult> {
