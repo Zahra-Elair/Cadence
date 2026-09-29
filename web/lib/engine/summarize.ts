@@ -11,7 +11,7 @@ export interface GenAILike {
   };
 }
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-3.8-flash";
 
 function emptySummary(period: Period, startISO: string, endISO: string): Summary {
   return {

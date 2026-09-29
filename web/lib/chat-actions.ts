@@ -15,13 +15,22 @@ export type ChatResult =
   | { ok: true; history: ChatContent[]; reply?: string; pending?: PendingWrite }
   | { ok: false; error: string; needsSignIn?: boolean };
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-3.8-flash";
+
+function statusOf(err: unknown): number | undefined {
+  return (err as { status?: number; code?: number })?.status ?? (err as { code?: number })?.code;
+}
 
 function isOverload(err: unknown): boolean {
-  const status = (err as { status?: number; code?: number })?.status ?? (err as { code?: number })?.code;
-  if (status === 503) return true;
+  if (statusOf(err) === 503) return true;
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
   return msg.includes("overload") || msg.includes("high demand") || msg.includes("unavailable");
+}
+
+function isQuota(err: unknown): boolean {
+  if (statusOf(err) === 429) return true;
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate limit");
 }
 
 function makeGenerate(timeZone: string): GenerateFn {
@@ -56,6 +65,9 @@ function makeGenerate(timeZone: string): GenerateFn {
     return {
       text: res.text ?? null,
       functionCall: call ? { name: call.name as string, args: (call.args ?? {}) as Record<string, unknown> } : null,
+      // Pass the model's raw content back so its Gemini-3 thought_signature is
+      // echoed verbatim into the next turn's history (required by the API).
+      content: res.candidates?.[0]?.content as unknown as ChatContent | undefined,
     };
   };
 }
@@ -85,6 +97,9 @@ function mapError(err: unknown): ChatResult {
   if (code === "AUTH_EXPIRED" || code === "SCOPE_DENIED") {
     return { ok: false, error: "Your Google session or calendar permission needs a refresh. Please sign in again.", needsSignIn: true };
   }
+  if (isQuota(err)) {
+    return { ok: false, error: "Gemini free-tier limit reached (it resets daily). Try again later, or switch GEMINI_MODEL to a model with a higher free quota." };
+  }
   if (isOverload(err)) {
     return { ok: false, error: "The assistant is busy right now — please try again in a moment." };
   }
@@ -102,6 +117,8 @@ async function withContext(
   try {
     return await fn(makeGenerate(timeZone), makeCalendarOps(token), token);
   } catch (err) {
+    // TEMP diagnostic: surface the real error in the dev-server terminal.
+    console.error("[chat] action failed:", err);
     return mapError(err);
   }
 }

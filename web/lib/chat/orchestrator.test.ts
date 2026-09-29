@@ -5,6 +5,32 @@ import type { ChatContent } from "./types";
 const userMsg = (t: string): ChatContent => ({ role: "user", parts: [{ text: t }] });
 
 describe("runTurn", () => {
+  it("echoes the model's raw content (e.g. Gemini-3 thought_signature) back into history, not a reconstruction", async () => {
+    // The model's real content carries an opaque thought_signature that must be
+    // preserved verbatim on the next turn.
+    const modelContent = {
+      role: "model" as const,
+      parts: [{ functionCall: { name: "list_events", args: { timeMin: "a", timeMax: "b" }, thoughtSignature: "sig-xyz" } }],
+    };
+    const seen: ChatContent[][] = [];
+    const generate = vi.fn(async (h: ChatContent[]) => {
+      seen.push(h);
+      if (seen.length === 1) {
+        return { text: null, functionCall: { name: "list_events", args: { timeMin: "a", timeMax: "b" } }, content: modelContent };
+      }
+      return { text: "done", functionCall: null, content: { role: "model" as const, parts: [{ text: "done" }] } };
+    });
+    const cal = { listEvents: vi.fn(async () => []) };
+    await runTurn([userMsg("what's on?")], generate, cal);
+    // The second generate() call's history must include the original functionCall
+    // part WITH its thoughtSignature — proving we appended res.content, not a rebuild.
+    const secondHistory = seen[1];
+    const preserved = secondHistory.some((c) =>
+      c.parts.some((p) => (p as { functionCall?: { thoughtSignature?: string } }).functionCall?.thoughtSignature === "sig-xyz"),
+    );
+    expect(preserved).toBe(true);
+  });
+
   it("returns a plain text reply", async () => {
     const generate = vi.fn(async () => ({ text: "Hello!", functionCall: null }));
     const cal = { listEvents: vi.fn() };

@@ -5,6 +5,11 @@ import { validateWriteArgs } from "./validate";
 export interface ModelResponse {
   text: string | null;
   functionCall: { name: string; args: Record<string, unknown> } | null;
+  // The model's actual returned content (its parts, including a Gemini-3
+  // `thought_signature` on functionCall parts). It MUST be echoed back into the
+  // history verbatim on the next turn, so we append this rather than a
+  // reconstruction. Optional so unit tests can omit it (they don't round-trip).
+  content?: ChatContent;
 }
 export type GenerateFn = (history: ChatContent[]) => Promise<ModelResponse>;
 
@@ -29,7 +34,10 @@ async function loop(history: ChatContent[], generate: GenerateFn, cal: CalendarO
 
     if (res.functionCall) {
       const { name, args } = res.functionCall;
-      contents = [...contents, { role: "model", parts: [{ functionCall: { name, args } }] }];
+      // Append the model's ACTUAL content (preserves Gemini-3 thought_signature),
+      // falling back to a reconstruction only when a caller (e.g. a unit test)
+      // didn't supply it.
+      contents = [...contents, res.content ?? { role: "model", parts: [{ functionCall: { name, args } }] }];
 
       if ((WRITE_TOOLS as string[]).includes(name)) {
         const check = validateWriteArgs(name as ToolName, args);
@@ -60,7 +68,7 @@ async function loop(history: ChatContent[], generate: GenerateFn, cal: CalendarO
     }
 
     const reply = res.text ?? "";
-    contents = [...contents, { role: "model", parts: [{ text: reply }] }];
+    contents = [...contents, res.content ?? { role: "model", parts: [{ text: reply }] }];
     return { kind: "reply", history: contents, reply };
   }
   return { kind: "reply", history: contents, reply: "I couldn't complete that — could you rephrase?" };
