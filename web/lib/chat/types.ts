@@ -16,6 +16,7 @@ export interface ChatContent {
 export interface PendingWrite {
   tool: "create_event" | "update_event" | "delete_event";
   args: Record<string, unknown>;
+  toolCallId: string;
   summary: string;
 }
 
