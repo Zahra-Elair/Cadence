@@ -39,8 +39,8 @@ export async function generateSummary(
         needsSignIn: true,
       };
     }
-    if (err instanceof QuotaExceededError) return { ok: false, error: "Gemini free-tier limit reached. Try again shortly." };
-    if (err instanceof MissingApiKeyError) return { ok: false, error: "Server is missing its Gemini API key." };
+    if (err instanceof QuotaExceededError) return { ok: false, error: "The AI provider's free-tier limit was reached. Try again shortly, or switch AI_PROVIDER / AI_MODEL." };
+    if (err instanceof MissingApiKeyError) return { ok: false, error: "The AI provider isn't configured on the server (missing or invalid API key)." };
     if (err instanceof SummarizerError) return { ok: false, error: err.message };
     return { ok: false, error: "Something went wrong fetching your calendar. Please try again." };
   }

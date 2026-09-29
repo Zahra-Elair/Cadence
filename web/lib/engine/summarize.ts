@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { CalEvent, Period, Summary } from "./types";
 import { buildPrompt } from "./prompt";
 import { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
-import { resolveModel, ProviderConfigError } from "../ai/provider";
+import { resolveModel, ProviderConfigError, GENERATION_PROVIDER_OPTIONS } from "../ai/provider";
 import { isQuota, isOverload } from "../ai/errors";
 
 export { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
@@ -41,7 +41,7 @@ export async function summarize(
 
   const prompt = buildPrompt(events, period, startISO, endISO);
   try {
-    const { object } = await generateObject({ model, schema: summarySchema, prompt });
+    const { object } = await generateObject({ model, schema: summarySchema, prompt, providerOptions: GENERATION_PROVIDER_OPTIONS });
     return { period, start: startISO, end: endISO, ...object, empty: false };
   } catch (err: unknown) {
     if (isQuota(err)) {

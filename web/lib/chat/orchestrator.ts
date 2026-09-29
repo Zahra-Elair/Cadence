@@ -2,6 +2,7 @@ import { generateText, stepCountIs, type JSONValue, type ModelMessage, type Lang
 import type { PendingWrite, ToolName } from "./types";
 import { WRITE_TOOLS, summarizeWrite } from "./types";
 import { validateWriteArgs } from "./schemas";
+import { GENERATION_PROVIDER_OPTIONS } from "../ai/provider";
 
 const MAX_STEPS = 8;
 const MAX_CORRECTIONS = 2;
@@ -30,6 +31,7 @@ async function loop(messages: ModelMessage[], deps: TurnDeps, correctionsLeft: n
     messages,
     tools: deps.tools,
     stopWhen: stepCountIs(MAX_STEPS),
+    providerOptions: GENERATION_PROVIDER_OPTIONS,
   });
   const nextMessages = [...messages, ...result.responseMessages];
 

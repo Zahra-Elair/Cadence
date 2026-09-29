@@ -29,7 +29,9 @@ const PROVIDERS: Record<string, ProviderSpec> = {
   },
   groq: {
     envKey: "GROQ_API_KEY",
-    defaultModel: "llama-3.3-70b-versatile",
+    // Groq rotates its catalog; if this id is retired for your account, set
+    // AI_MODEL to a current tool-capable model from https://console.groq.com/docs/models
+    defaultModel: "openai/gpt-oss-120b",
     make: (apiKey, modelId) => createGroq({ apiKey })(modelId),
   },
   mistral: {
@@ -66,3 +68,14 @@ export function resolveModel(): LanguageModel {
   const modelId = process.env.AI_MODEL?.trim() || spec.defaultModel;
   return spec.make(apiKey, modelId);
 }
+
+/**
+ * Provider-specific generation options, namespaced by provider (a provider
+ * ignores keys that aren't its own). Groq's reasoning models (gpt-oss, qwen3)
+ * otherwise emit their chain-of-thought inline into the reply; "hidden" keeps
+ * the model reasoning internally but returns only the final answer. Pass this
+ * as `providerOptions` on generateText / generateObject.
+ */
+export const GENERATION_PROVIDER_OPTIONS = {
+  groq: { reasoningFormat: "hidden" },
+};
