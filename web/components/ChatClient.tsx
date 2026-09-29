@@ -4,6 +4,7 @@ import type { ModelMessage } from "ai";
 import type { PendingWrite } from "@/lib/chat/types";
 import { sendChatMessage, confirmWrite, declineWrite, type ChatResult } from "@/lib/chat-actions";
 import { ConfirmWriteCard } from "./ConfirmWriteCard";
+import { Markdown } from "./Markdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -92,10 +93,15 @@ export function ChatClient() {
         <div className="space-y-3">
           {bubbles.map((b, i) => (
             <div key={i} className={cn("flex", b.role === "user" ? "justify-end" : "justify-start")}>
-              <span className={cn("inline-block max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm",
-                b.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
-                {b.text}
-              </span>
+              {b.role === "user" ? (
+                <span className="inline-block max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground">
+                  {b.text}
+                </span>
+              ) : (
+                <div className="max-w-[80%] overflow-x-auto rounded-2xl bg-muted px-4 py-2 text-sm text-foreground">
+                  <Markdown>{b.text}</Markdown>
+                </div>
+              )}
             </div>
           ))}
           {pending && <ConfirmWriteCard pending={pending} busy={busy} onConfirm={onConfirm} onCancel={onCancel} />}

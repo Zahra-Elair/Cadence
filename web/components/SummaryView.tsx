@@ -1,10 +1,11 @@
 import type { Summary } from "@/lib/engine/types";
 import { Badge } from "@/components/ui/badge";
+import { Markdown, MarkdownInline } from "@/components/Markdown";
 
 export function SummaryView({ summary }: { summary: Summary }) {
   return (
     <div className="space-y-5">
-      <p className="text-lg leading-relaxed">{summary.overview}</p>
+      <Markdown className="prose-base">{summary.overview}</Markdown>
       <div className="grid grid-cols-2 gap-3">
         <Metric label="Scheduled" value={summary.timeBreakdown} />
         <Metric label="Key events" value={String(summary.keyEvents.length)} />
@@ -14,7 +15,7 @@ export function SummaryView({ summary }: { summary: Summary }) {
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground">Highlights</h3>
           <div className="flex flex-wrap gap-2">
-            {summary.highlights.map((h, i) => <Badge key={i} variant="secondary">{h}</Badge>)}
+            {summary.highlights.map((h, i) => <Badge key={i} variant="secondary"><MarkdownInline>{h}</MarkdownInline></Badge>)}
           </div>
         </div>
       )}
@@ -40,7 +41,7 @@ function Section({ title, items }: { title: string; items: string[] }) {
         {items.map((it, i) => (
           <li key={i} className="flex gap-2 text-sm">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-            <span>{it}</span>
+            <span><MarkdownInline>{it}</MarkdownInline></span>
           </li>
         ))}
       </ul>
