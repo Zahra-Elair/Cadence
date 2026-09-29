@@ -1,17 +1,18 @@
-import { GoogleGenAI } from "@google/genai";
+import { generateObject, APICallError, RetryError, type LanguageModel } from "ai";
+import { z } from "zod";
 import type { CalEvent, Period, Summary } from "./types";
-import { buildPrompt, parseResponse } from "./prompt";
+import { buildPrompt } from "./prompt";
 import { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
+import { resolveModel, ProviderConfigError } from "../ai/provider";
 
 export { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
 
-export interface GenAILike {
-  models: {
-    generateContent(args: { model: string; contents: string; config?: unknown }): Promise<{ text?: string | null }>;
-  };
-}
-
-const DEFAULT_MODEL = "gemini-3.8-flash";
+const summarySchema = z.object({
+  overview: z.string(),
+  keyEvents: z.array(z.string()),
+  timeBreakdown: z.string(),
+  highlights: z.array(z.string()),
+});
 
 function emptySummary(period: Period, startISO: string, endISO: string): Summary {
   return {
@@ -21,69 +22,50 @@ function emptySummary(period: Period, startISO: string, endISO: string): Summary
   };
 }
 
-function makeClient(): GenAILike {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new MissingApiKeyError(
-      "GEMINI_API_KEY is not set. Get a free key at https://aistudio.google.com/apikey.",
-    );
-  }
-  return new GoogleGenAI({ apiKey }) as unknown as GenAILike;
-}
-
 function statusOf(err: unknown): number | undefined {
-  return (err as { status?: number; code?: number })?.status
+  // After the SDK's built-in retries are exhausted it wraps the real error in a RetryError.
+  if (RetryError.isInstance(err)) return statusOf(err.lastError);
+  if (APICallError.isInstance(err)) return err.statusCode;
+  return (err as { statusCode?: number; status?: number; code?: number })?.statusCode
+    ?? (err as { status?: number })?.status
     ?? (err as { code?: number })?.code;
 }
 
-/** A transient "model overloaded / high demand" (503) failure, worth one retry. */
 function isOverload(err: unknown): boolean {
   if (statusOf(err) === 503) return true;
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return msg.includes("overload") || msg.includes("high demand") || msg.includes("unavailable");
-}
-
-async function generateWithOverloadRetry(
-  client: GenAILike, model: string, prompt: string, retryDelayMs: number,
-): Promise<string | null | undefined> {
-  const call = () =>
-    client.models.generateContent({
-      model, contents: prompt, config: { responseMimeType: "application/json" },
-    });
-  try {
-    return (await call()).text;
-  } catch (err) {
-    if (!isOverload(err)) throw err;
-    if (retryDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    return (await call()).text; // one retry; a second overload propagates to the caller
-  }
+  if (RetryError.isInstance(err)) return isOverload(err.lastError);
+  const m = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return m.includes("overload") || m.includes("high demand") || m.includes("unavailable");
 }
 
 export async function summarize(
   events: CalEvent[], period: Period, startISO: string, endISO: string,
-  opts: { client?: GenAILike; model?: string; retryDelayMs?: number } = {},
+  opts: { model?: LanguageModel } = {},
 ): Promise<Summary> {
   if (events.length === 0) return emptySummary(period, startISO, endISO);
 
-  const client = opts.client ?? makeClient();
-  const model = opts.model ?? process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
-  const retryDelayMs = opts.retryDelayMs ?? 800;
-  const prompt = buildPrompt(events, period, startISO, endISO);
-
-  let text: string | null | undefined;
+  let model: LanguageModel;
   try {
-    text = await generateWithOverloadRetry(client, model, prompt, retryDelayMs);
-  } catch (err: unknown) {
-    if (statusOf(err) === 429) {
-      throw new QuotaExceededError("Gemini free-tier quota/rate limit reached. Try again shortly.");
+    model = opts.model ?? resolveModel();
+  } catch (err) {
+    if (err instanceof ProviderConfigError) {
+      throw new MissingApiKeyError(err.message);
     }
-    if (isOverload(err)) {
-      throw new SummarizerError("Gemini is busy right now — please try again in a moment.");
-    }
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new SummarizerError(`Failed to reach Gemini: ${msg}`);
+    throw err;
   }
 
-  if (!text) throw new SummarizerError("Gemini returned an empty or blocked response.");
-  return parseResponse(text, period, startISO, endISO);
+  const prompt = buildPrompt(events, period, startISO, endISO);
+  try {
+    const { object } = await generateObject({ model, schema: summarySchema, prompt });
+    return { period, start: startISO, end: endISO, ...object, empty: false };
+  } catch (err: unknown) {
+    if (statusOf(err) === 429) {
+      throw new QuotaExceededError("Free-tier quota/rate limit reached. Try again shortly.");
+    }
+    if (isOverload(err)) {
+      throw new SummarizerError("The summarizer is busy right now — please try again in a moment.");
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new SummarizerError(`Failed to generate the summary: ${msg}`);
+  }
 }

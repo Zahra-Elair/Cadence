@@ -1,5 +1,4 @@
-import type { CalEvent, Period, Summary } from "./types";
-import { SummarizerError } from "./errors";
+import type { CalEvent, Period } from "./types";
 
 function roundHalfToEven(value: number, decimals = 1): number {
   const factor = 10 ** decimals;
@@ -47,32 +46,4 @@ export function buildPrompt(
     "",
     'Respond ONLY with a JSON object with exactly these keys: "overview" (string, 1-2 sentences), "keyEvents" (array of short strings), "timeBreakdown" (string), "highlights" (array of short strings).',
   ].join("\n");
-}
-
-function stripCodeFence(raw: string): string {
-  let t = raw.trim();
-  if (t.startsWith("```")) {
-    t = t.includes("\n") ? t.slice(t.indexOf("\n") + 1) : t;
-    const fence = t.lastIndexOf("```");
-    if (fence !== -1) t = t.slice(0, fence);
-  }
-  return t.trim();
-}
-
-export function parseResponse(
-  raw: string, period: Period, startISO: string, endISO: string,
-): Summary {
-  const data: unknown = JSON.parse(stripCodeFence(raw));
-  if (typeof data !== "object" || data === null || Array.isArray(data)) {
-    throw new SummarizerError("Unexpected response shape from model (expected a JSON object).");
-  }
-  const d = data as Record<string, unknown>;
-  return {
-    period, start: startISO, end: endISO,
-    overview: typeof d.overview === "string" ? d.overview : "",
-    keyEvents: Array.isArray(d.keyEvents) ? d.keyEvents.map(String) : [],
-    timeBreakdown: typeof d.timeBreakdown === "string" ? d.timeBreakdown : "",
-    highlights: Array.isArray(d.highlights) ? d.highlights.map(String) : [],
-    empty: false,
-  };
 }

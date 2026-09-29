@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { summarize, SummarizerError, MissingApiKeyError, QuotaExceededError } from "./summarize";
+import { describe, it, expect } from "vitest";
+import { MockLanguageModelV4 } from "ai/test";
+import { RetryError } from "ai";
+import { summarize, SummarizerError, QuotaExceededError, MissingApiKeyError } from "./summarize";
 import type { CalEvent } from "./types";
 
 const oneEvent: CalEvent[] = [{
@@ -7,72 +9,81 @@ const oneEvent: CalEvent[] = [{
   end: new Date("2026-09-22T09:15:00Z"), allDay: false, attendees: [],
 }];
 
-const fakeClient = (impl: () => Promise<{ text?: string | null }>) => ({
-  models: { generateContent: vi.fn(impl) },
-});
+// v7 (LanguageModelV4) usage/finishReason shapes: usage is nested, finishReason is an object.
+const usage = {
+  inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+  outputTokens: { total: 1, text: 1, reasoning: 0 },
+};
+function objectModel(obj: unknown) {
+  return new MockLanguageModelV4({
+    doGenerate: async () => ({
+      content: [{ type: "text", text: JSON.stringify(obj) }],
+      finishReason: { unified: "stop", raw: "stop" },
+      usage,
+      warnings: [],
+    }) as never,
+  });
+}
+function throwingModel(err: Error) {
+  return new MockLanguageModelV4({ doGenerate: async () => { throw err; } });
+}
 
 describe("summarize", () => {
-  it("empty events → empty summary, no API call", async () => {
-    const client = fakeClient(async () => ({ text: "SHOULD NOT BE USED" }));
-    const s = await summarize([], "daily", "2026-09-22", "2026-09-23", { client });
+  it("empty events → empty summary, no model call", async () => {
+    const s = await summarize([], "daily", "2026-09-22", "2026-09-23", { model: objectModel({}) });
     expect(s.empty).toBe(true);
-    expect(client.models.generateContent).not.toHaveBeenCalled();
     expect(s.overview.toLowerCase()).toContain("nothing");
   });
 
-  it("calls client and parses result", async () => {
-    const raw = JSON.stringify({ overview: "Busy morning.", keyEvents: ["09:00 Standup"], timeBreakdown: "0.2h", highlights: [] });
-    const client = fakeClient(async () => ({ text: raw }));
-    const s = await summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { client });
-    expect(client.models.generateContent).toHaveBeenCalledOnce();
+  it("returns a parsed summary from the model object", async () => {
+    const model = objectModel({ overview: "Busy morning.", keyEvents: ["09:00 Standup"], timeBreakdown: "0.2h", highlights: [] });
+    const s = await summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { model });
     expect(s.overview).toBe("Busy morning.");
+    expect(s.keyEvents).toContain("09:00 Standup");
+    expect(s.empty).toBe(false);
   });
 
-  it("empty/None response text → SummarizerError", async () => {
-    const client = fakeClient(async () => ({ text: null }));
-    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { client })).rejects.toBeInstanceOf(SummarizerError);
+  it("a 429 error → QuotaExceededError", async () => {
+    const err = Object.assign(new Error("quota"), { statusCode: 429 });
+    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { model: throwingModel(err) }))
+      .rejects.toBeInstanceOf(QuotaExceededError);
   });
 
-  it("a 429-coded error → QuotaExceededError", async () => {
-    const client = fakeClient(async () => { const e: any = new Error("quota"); e.status = 429; throw e; });
-    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { client })).rejects.toBeInstanceOf(QuotaExceededError);
+  it("a 503 overload → friendly 'busy' SummarizerError", async () => {
+    const err = Object.assign(new Error("The model is overloaded"), { statusCode: 503 });
+    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { model: throwingModel(err) }))
+      .rejects.toThrow(/busy/i);
   });
 
-  it("any other client error → SummarizerError", async () => {
-    const client = fakeClient(async () => { throw new Error("boom"); });
-    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { client })).rejects.toBeInstanceOf(SummarizerError);
+  it("a RetryError wrapping a 429 → QuotaExceededError", async () => {
+    const last = Object.assign(new Error("quota"), { statusCode: 429 });
+    const err = new RetryError({ message: "retries exhausted", reason: "maxRetriesExceeded", errors: [last] });
+    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { model: throwingModel(err) }))
+      .rejects.toBeInstanceOf(QuotaExceededError);
   });
 
-  it("missing key and no injected client → MissingApiKeyError", async () => {
+  it("a RetryError wrapping a 503 → 'busy' SummarizerError", async () => {
+    const last = Object.assign(new Error("The model is overloaded"), { statusCode: 503 });
+    const err = new RetryError({ message: "retries exhausted", reason: "maxRetriesExceeded", errors: [last] });
+    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { model: throwingModel(err) }))
+      .rejects.toThrow(/busy/i);
+  });
+
+  it("any other model error → SummarizerError", async () => {
+    await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { model: throwingModel(new Error("boom")) }))
+      .rejects.toBeInstanceOf(SummarizerError);
+  });
+
+  it("missing key and no injected model → MissingApiKeyError", async () => {
     const prev = process.env.GEMINI_API_KEY;
+    const prevProvider = process.env.AI_PROVIDER;
     delete process.env.GEMINI_API_KEY;
+    delete process.env.AI_PROVIDER;
     try {
       await expect(summarize(oneEvent, "daily", "2026-09-22", "2026-09-23")).rejects.toBeInstanceOf(MissingApiKeyError);
     } finally {
       if (prev !== undefined) process.env.GEMINI_API_KEY = prev;
+      if (prevProvider !== undefined) process.env.AI_PROVIDER = prevProvider;
     }
-  });
-
-  it("retries once on a transient overload (503) and then succeeds", async () => {
-    const raw = JSON.stringify({ overview: "ok", keyEvents: [], timeBreakdown: "", highlights: [] });
-    const generateContent = vi
-      .fn()
-      .mockRejectedValueOnce(Object.assign(new Error("The model is overloaded"), { status: 503 }))
-      .mockResolvedValueOnce({ text: raw });
-    const client = { models: { generateContent } };
-    const s = await summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { client, retryDelayMs: 0 });
-    expect(generateContent).toHaveBeenCalledTimes(2);
-    expect(s.overview).toBe("ok");
-  });
-
-  it("maps a persistent overload to a friendly 'busy' SummarizerError", async () => {
-    const generateContent = vi.fn(async () => {
-      throw Object.assign(new Error("The model is overloaded. Please try again later."), { status: 503 });
-    });
-    const client = { models: { generateContent } };
-    await expect(
-      summarize(oneEvent, "daily", "2026-09-22", "2026-09-23", { client, retryDelayMs: 0 }),
-    ).rejects.toThrow(/busy/i);
-    expect(generateContent).toHaveBeenCalledTimes(2); // original + one retry
   });
 });

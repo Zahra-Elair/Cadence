@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { totalScheduledHours, buildPrompt, parseResponse } from "./prompt";
+import { totalScheduledHours, buildPrompt } from "./prompt";
 import type { CalEvent } from "./types";
 
 const ev = (title: string, start: string, end: string, allDay = false): CalEvent => ({
@@ -36,25 +36,5 @@ describe("buildPrompt", () => {
     expect(p).toContain("2026-09-22");
     expect(p).toContain("Standup");
     expect(p).toContain("0.2"); // 15 min rounded
-  });
-});
-
-describe("parseResponse", () => {
-  it("parses a JSON object into a Summary", () => {
-    const raw = JSON.stringify({
-      overview: "A light day.", keyEvents: ["09:00 Standup"],
-      timeBreakdown: "~0.2h", highlights: ["Nothing urgent"],
-    });
-    const s = parseResponse(raw, "daily", "2026-09-22", "2026-09-23");
-    expect(s.overview).toBe("A light day.");
-    expect(s.keyEvents).toEqual(["09:00 Standup"]);
-    expect(s.empty).toBe(false);
-  });
-  it("tolerates a ```json fenced block", () => {
-    const raw = "```json\n{\"overview\":\"x\",\"keyEvents\":[],\"timeBreakdown\":\"\",\"highlights\":[]}\n```";
-    expect(parseResponse(raw, "weekly", "2026-09-21", "2026-09-28").overview).toBe("x");
-  });
-  it("throws on non-object JSON", () => {
-    expect(() => parseResponse("[1,2,3]", "daily", "2026-09-22", "2026-09-23")).toThrow();
   });
 });
