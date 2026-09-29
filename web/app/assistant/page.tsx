@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { auth } from "@/auth";
 import { SignInButton } from "@/components/SignInButton";
 import { SignOutButton } from "@/components/SignOutButton";
+import { Header } from "@/components/Header";
 import { ChatClient } from "@/components/ChatClient";
 
 export default async function AssistantPage() {
@@ -10,24 +10,21 @@ export default async function AssistantPage() {
   if (!session) redirect("/");
   if (session.calendarGranted === false) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 p-6 text-center">
-        <h1 className="text-2xl font-bold">Calendar access needed</h1>
-        <p className="text-gray-600">The assistant needs read+write access to your Google Calendar. Please sign in again and allow it.</p>
-        <SignInButton />
+      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 px-4 text-center">
+        <h1 className="text-2xl font-medium">Calendar access needed</h1>
+        <p className="text-muted-foreground">The assistant needs read and write access to your Google Calendar. Please sign in again and allow it.</p>
+        <SignInButton label="Sign in and allow access" />
         <SignOutButton />
       </main>
     );
   }
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Calendar assistant</h1>
-        <div className="flex items-center gap-3 text-sm text-gray-600">
-          <Link href="/dashboard" className="hover:text-black">Summary</Link>
-          <SignOutButton />
-        </div>
-      </header>
-      <ChatClient />
-    </main>
+    <>
+      <Header user={{ name: session.user?.name, email: session.user?.email, image: session.user?.image }} />
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+        <h1 className="mb-6 text-2xl font-medium">Assistant</h1>
+        <ChatClient />
+      </main>
+    </>
   );
 }

@@ -4,6 +4,12 @@ import type { ModelMessage } from "ai";
 import type { PendingWrite } from "@/lib/chat/types";
 import { sendChatMessage, confirmWrite, declineWrite, type ChatResult } from "@/lib/chat-actions";
 import { ConfirmWriteCard } from "./ConfirmWriteCard";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import { Send } from "lucide-react";
 
 interface Bubble { role: "user" | "assistant"; text: string }
 
@@ -74,28 +80,32 @@ export function ChatClient() {
   const bubbles = bubblesFrom(messages);
   return (
     <div className="flex flex-col gap-4">
-      <div className="space-y-3">
-        {bubbles.map((b, i) => (
-          <div key={i} className={b.role === "user" ? "text-right" : "text-left"}>
-            <span className={`inline-block max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm ${b.role === "user" ? "bg-black text-white" : "bg-gray-100 text-gray-900"}`}>
-              {b.text}
-            </span>
-          </div>
-        ))}
-        {pending && <ConfirmWriteCard pending={pending} busy={busy} onConfirm={onConfirm} onCancel={onCancel} />}
-        {busy && !pending && <p className="text-sm text-gray-400">Thinking…</p>}
-        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      </div>
+      <ScrollArea className="h-[60vh] rounded-xl border p-4">
+        {bubbles.length === 0 && !busy && (
+          <p className="py-16 text-center text-sm text-muted-foreground">Ask about your schedule — e.g. "what's on today?" or "add lunch with Sam Thursday at 1pm".</p>
+        )}
+        <div className="space-y-3">
+          {bubbles.map((b, i) => (
+            <div key={i} className={cn("flex", b.role === "user" ? "justify-end" : "justify-start")}>
+              <span className={cn("inline-block max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm",
+                b.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
+                {b.text}
+              </span>
+            </div>
+          ))}
+          {pending && <ConfirmWriteCard pending={pending} busy={busy} onConfirm={onConfirm} onCancel={onCancel} />}
+          {busy && !pending && <p className="text-sm text-muted-foreground">Thinking…</p>}
+        </div>
+      </ScrollArea>
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="flex gap-2">
-        <input value={input} onChange={(e) => setInput(e.target.value)} disabled={busy || !!pending}
-          placeholder="e.g. add lunch with Sam Thursday at 1pm"
-          className="flex-1 rounded-lg border px-3 py-2 text-sm disabled:bg-gray-50" />
-        <button type="submit" disabled={busy || !!pending || !input.trim()}
-          className="rounded-lg bg-black px-5 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50">
-          Send
-        </button>
+        <Input value={input} onChange={(e) => setInput(e.target.value)} disabled={busy || !!pending}
+          placeholder="Message the assistant…" />
+        <Button type="submit" size="icon" disabled={busy || !!pending || !input.trim()} aria-label="Send">
+          <Send className="h-4 w-4" />
+        </Button>
       </form>
-      {pending && <p className="text-xs text-gray-400">Confirm or cancel the pending action to continue.</p>}
+      {pending && <p className="text-xs text-muted-foreground">Confirm or cancel the pending action to continue.</p>}
     </div>
   );
 }
