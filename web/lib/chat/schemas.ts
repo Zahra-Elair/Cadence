@@ -26,6 +26,7 @@ export const createEventSchema = z
 export const updateEventSchema = z
   .object({
     eventId: z.string().trim().min(1).describe("Id from list_events."),
+    eventTitle: z.string().optional().describe("The target event's current human-readable title, shown in the confirmation prompt (not used to modify the event)."),
     title: z.string().optional(),
     start: isoDateTime.optional(),
     end: isoDateTime.optional(),
@@ -43,6 +44,7 @@ export const updateEventSchema = z
 
 export const deleteEventSchema = z.object({
   eventId: z.string().trim().min(1).describe("Id from list_events."),
+  eventTitle: z.string().optional().describe("The event's current human-readable title, shown in the confirmation prompt (not used to perform the deletion)."),
 });
 
 const WRITE_SCHEMAS = {

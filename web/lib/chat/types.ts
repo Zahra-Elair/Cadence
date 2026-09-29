@@ -19,9 +19,12 @@ export function summarizeWrite(tool: ToolName, args: Record<string, unknown>): s
   const a = args as Record<string, string>;
   if (tool === "create_event") return `Create "${a.title}" · ${fmt(a.start)} – ${fmt(a.end)}`;
   if (tool === "update_event") {
-    const when = a.start ? ` · ${fmt(a.start)}${a.end ? ` – ${fmt(a.end)}` : ""}` : "";
-    return `Update event ${a.eventId}${a.title ? ` → "${a.title}"` : ""}${when}`;
+    const label = a.eventTitle ? `"${a.eventTitle}"` : "this event";
+    const changes: string[] = [];
+    if (a.title) changes.push(`rename to "${a.title}"`);
+    if (a.start) changes.push(`${fmt(a.start)}${a.end ? ` – ${fmt(a.end)}` : ""}`);
+    return `Update ${label}${changes.length ? ` → ${changes.join(", ")}` : ""}`;
   }
-  if (tool === "delete_event") return `Delete event ${a.eventId}`;
+  if (tool === "delete_event") return `Delete ${a.eventTitle ? `"${a.eventTitle}"` : "this event"}`;
   return tool;
 }

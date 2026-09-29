@@ -36,12 +36,14 @@ export function buildTools(token: string): ToolSet {
       // No execute: human-in-the-loop confirmation required.
     }),
     update_event: tool({
-      description: "Update fields of an existing event. Get the eventId from list_events first.",
+      description:
+        "Update fields of an existing event. Get the eventId from list_events first, and pass the event's current title as eventTitle so the confirmation prompt reads naturally.",
       inputSchema: updateEventSchema,
       // No execute.
     }),
     delete_event: tool({
-      description: "Delete an event. Get the eventId from list_events first.",
+      description:
+        "Delete an event. Get the eventId from list_events first, and pass the event's current title as eventTitle so the confirmation prompt reads naturally.",
       inputSchema: deleteEventSchema,
       // No execute.
     }),
