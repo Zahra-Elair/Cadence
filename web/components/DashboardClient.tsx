@@ -24,16 +24,15 @@ export function DashboardClient() {
 
   useEffect(() => {
     if (!shouldFetch(state, period)) return;
-    let cancelled = false;
     dispatch({ type: "loading", period });
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const date = DateTime.now().toISODate()!;
-    generateSummary({ period, date, zone }).then((res) => {
-      if (cancelled) return;
-      if (res.ok) dispatch({ type: "loaded", period, summary: res.summary });
-      else dispatch({ type: "error", period, error: res.error, needsSignIn: Boolean(res.needsSignIn) });
-    });
-    return () => { cancelled = true; };
+    generateSummary({ period, date, zone })
+      .then((res) => {
+        if (res.ok) dispatch({ type: "loaded", period, summary: res.summary });
+        else dispatch({ type: "error", period, error: res.error, needsSignIn: Boolean(res.needsSignIn) });
+      })
+      .catch(() => dispatch({ type: "error", period, error: "Couldn't reach the server. Please try again.", needsSignIn: false }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
