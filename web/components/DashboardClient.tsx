@@ -1,60 +1,74 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useReducer } from "react";
 import { DateTime } from "luxon";
 import { signIn } from "next-auth/react";
-import type { Period, Summary } from "@/lib/engine/types";
+import type { Period } from "@/lib/engine/types";
 import { generateSummary } from "@/lib/actions";
-import { PeriodSelector } from "./PeriodSelector";
+import { initialSummaryState, summaryReducer, shouldFetch } from "@/lib/dashboard/summary-state";
 import { SummaryView } from "./SummaryView";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+
+const TABS: { value: Period; label: string }[] = [
+  { value: "daily", label: "Day" },
+  { value: "weekly", label: "Week" },
+  { value: "monthly", label: "Month" },
+];
 
 export function DashboardClient() {
-  const today = DateTime.now().toISODate()!;
-  const [period, setPeriod] = useState<Period>("weekly");
-  const [date, setDate] = useState(today);
-  const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [state, dispatch] = useReducer(summaryReducer, undefined, () => initialSummaryState("weekly"));
+  const period = state.period;
 
-  async function run() {
-    setLoading(true); setError(null); setSummary(null); setNeedsSignIn(false);
+  useEffect(() => {
+    if (!shouldFetch(state, period)) return;
+    let cancelled = false;
+    dispatch({ type: "loading", period });
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const res = await generateSummary({ period, date, zone });
-    setLoading(false);
-    if (res.ok) setSummary(res.summary);
-    else {
-      setError(res.error);
-      setNeedsSignIn(Boolean(res.needsSignIn));
-    }
-  }
+    const date = DateTime.now().toISODate()!;
+    generateSummary({ period, date, zone }).then((res) => {
+      if (cancelled) return;
+      if (res.ok) dispatch({ type: "loaded", period, summary: res.summary });
+      else dispatch({ type: "error", period, error: res.error, needsSignIn: Boolean(res.needsSignIn) });
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
+
+  const cell = state.byPeriod[period];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <PeriodSelector value={period} onChange={setPeriod} disabled={loading} />
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={loading}
-          className="rounded-lg border px-3 py-1.5 text-sm" />
-        <button onClick={run} disabled={loading}
-          className="rounded-lg bg-black px-5 py-2 text-white hover:bg-gray-800 disabled:opacity-50">
-          {loading ? "Summarizing…" : "Summarize"}
-        </button>
-      </div>
+      <Tabs value={period} onValueChange={(v) => dispatch({ type: "select", period: v as Period })}>
+        <TabsList>
+          {TABS.map((t) => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+        </TabsList>
+      </Tabs>
 
-      {error && needsSignIn && (
-        <div className="rounded-lg bg-amber-50 p-4 text-amber-800">
-          <p>{error}</p>
-          <button
-            onClick={() => signIn("google", { redirectTo: "/dashboard" })}
-            className="mt-3 rounded-lg bg-black px-5 py-2 text-white hover:bg-gray-800"
-          >
-            Sign in with Google
-          </button>
-        </div>
+      {(!cell || cell.status === "loading") && (
+        <Card><CardContent className="space-y-4 p-6">
+          <Skeleton className="h-6 w-3/4" />
+          <div className="grid grid-cols-2 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>
+          <Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-2/3" />
+        </CardContent></Card>
       )}
-      {error && !needsSignIn && <p className="rounded-lg bg-red-50 p-4 text-red-700">{error}</p>}
-      {summary && (summary.empty
-        ? <p className="rounded-lg bg-gray-50 p-4 text-gray-600">Nothing scheduled for this period.</p>
-        : <div className="rounded-xl border bg-white p-6 shadow-sm"><SummaryView summary={summary} /></div>)}
+
+      {cell?.status === "error" && (
+        <Alert variant="destructive">
+          <AlertDescription className="space-y-3">
+            <p>{cell.error}</p>
+            {cell.needsSignIn && (
+              <Button onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {cell?.status === "loaded" && (cell.summary.empty
+        ? <Card><CardContent className="p-6 text-muted-foreground">Nothing scheduled for this period.</CardContent></Card>
+        : <Card><CardContent className="p-6"><SummaryView summary={cell.summary} /></CardContent></Card>)}
     </div>
   );
 }
