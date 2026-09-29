@@ -1,86 +1,75 @@
-import type { ChatContent, PendingWrite, ToolName } from "./types";
+import { generateText, stepCountIs, type JSONValue, type ModelMessage, type LanguageModel, type ToolSet } from "ai";
+import type { PendingWrite, ToolName } from "./types";
 import { WRITE_TOOLS, summarizeWrite } from "./types";
-import { validateWriteArgs } from "./validate";
+import { validateWriteArgs } from "./schemas";
 
-export interface ModelResponse {
-  text: string | null;
-  functionCall: { name: string; args: Record<string, unknown> } | null;
-  // The model's actual returned content (its parts, including a Gemini-3
-  // `thought_signature` on functionCall parts). It MUST be echoed back into the
-  // history verbatim on the next turn, so we append this rather than a
-  // reconstruction. Optional so unit tests can omit it (they don't round-trip).
-  content?: ChatContent;
-}
-export type GenerateFn = (history: ChatContent[]) => Promise<ModelResponse>;
+const MAX_STEPS = 8;
+const MAX_CORRECTIONS = 2;
 
-export interface CalendarOps {
-  listEvents(args: { timeMin: string; timeMax: string }): Promise<unknown>;
+export interface TurnDeps {
+  model: LanguageModel;
+  tools: ToolSet;
+  system: string;
 }
 
 export type TurnResult =
-  | { kind: "reply"; history: ChatContent[]; reply: string }
-  | { kind: "confirm"; history: ChatContent[]; pending: PendingWrite };
+  | { kind: "reply"; messages: ModelMessage[]; reply: string }
+  | { kind: "confirm"; messages: ModelMessage[]; pending: PendingWrite };
 
-const MAX_STEPS = 8;
-
-function toolResult(name: string, response: Record<string, unknown>): ChatContent {
-  return { role: "user", parts: [{ functionResponse: { name, response } }] };
+function toolResultMessage(toolCallId: string, toolName: string, output: unknown): ModelMessage {
+  return {
+    role: "tool",
+    content: [{ type: "tool-result", toolCallId, toolName, output: { type: "json", value: output as JSONValue } }],
+  };
 }
 
-async function loop(history: ChatContent[], generate: GenerateFn, cal: CalendarOps): Promise<TurnResult> {
-  let contents = history;
-  for (let step = 0; step < MAX_STEPS; step++) {
-    const res = await generate(contents);
+async function loop(messages: ModelMessage[], deps: TurnDeps, correctionsLeft: number): Promise<TurnResult> {
+  const result = await generateText({
+    model: deps.model,
+    system: deps.system,
+    messages,
+    tools: deps.tools,
+    stopWhen: stepCountIs(MAX_STEPS),
+  });
+  const nextMessages = [...messages, ...result.response.messages];
 
-    if (res.functionCall) {
-      const { name, args } = res.functionCall;
-      // Append the model's ACTUAL content (preserves Gemini-3 thought_signature),
-      // falling back to a reconstruction only when a caller (e.g. a unit test)
-      // didn't supply it.
-      contents = [...contents, res.content ?? { role: "model", parts: [{ functionCall: { name, args } }] }];
+  // Reads auto-execute inside generateText. Any tool call still unresolved here
+  // is a write (no execute) that stopped the run.
+  const writeCall = result.toolCalls.find((c) =>
+    (WRITE_TOOLS as readonly string[]).includes(c.toolName),
+  );
 
-      if ((WRITE_TOOLS as string[]).includes(name)) {
-        const check = validateWriteArgs(name as ToolName, args);
-        if (!check.ok) {
-          contents = [...contents, toolResult(name, { error: check.error })];
-          continue; // let the model correct itself
-        }
-        return {
-          kind: "confirm",
-          history: contents,
-          pending: { tool: name as PendingWrite["tool"], args, summary: summarizeWrite(name as ToolName, args) },
-        };
-      }
-
-      if (name === "list_events") {
-        try {
-          const result = await cal.listEvents(args as { timeMin: string; timeMax: string });
-          contents = [...contents, toolResult(name, { events: result })];
-        } catch (err) {
-          contents = [...contents, toolResult(name, { error: (err as Error).message })];
-        }
-        continue;
-      }
-
-      // unknown tool name — don't guess at intent, let the model recover
-      contents = [...contents, toolResult(name, { error: `Unknown tool: ${name}` })];
-      continue;
+  if (writeCall) {
+    const tool = writeCall.toolName as PendingWrite["tool"];
+    const args = (writeCall.input ?? {}) as Record<string, unknown>;
+    const check = validateWriteArgs(tool as ToolName, args);
+    if (check.ok) {
+      return {
+        kind: "confirm",
+        messages: nextMessages,
+        pending: { tool, args, toolCallId: writeCall.toolCallId, summary: summarizeWrite(tool as ToolName, args) },
+      };
     }
-
-    const reply = res.text ?? "";
-    contents = [...contents, res.content ?? { role: "model", parts: [{ text: reply }] }];
-    return { kind: "reply", history: contents, reply };
+    if (correctionsLeft <= 0) {
+      return { kind: "reply", messages: nextMessages, reply: "I couldn't build a valid change — could you rephrase?" };
+    }
+    const corrected = [...nextMessages, toolResultMessage(writeCall.toolCallId, tool, { error: check.error })];
+    return loop(corrected, deps, correctionsLeft - 1);
   }
-  return { kind: "reply", history: contents, reply: "I couldn't complete that — could you rephrase?" };
+
+  return { kind: "reply", messages: nextMessages, reply: result.text ?? "" };
 }
 
-export function runTurn(history: ChatContent[], generate: GenerateFn, cal: CalendarOps): Promise<TurnResult> {
-  return loop(history, generate, cal);
+export function runTurn(messages: ModelMessage[], deps: TurnDeps): Promise<TurnResult> {
+  return loop(messages, deps, MAX_CORRECTIONS);
 }
 
 export function continueAfterToolResult(
-  history: ChatContent[], toolName: string, response: Record<string, unknown>,
-  generate: GenerateFn, cal: CalendarOps,
+  messages: ModelMessage[],
+  toolCallId: string,
+  toolName: string,
+  output: unknown,
+  deps: TurnDeps,
 ): Promise<TurnResult> {
-  return loop([...history, toolResult(toolName, response)], generate, cal);
+  return loop([...messages, toolResultMessage(toolCallId, toolName, output)], deps, MAX_CORRECTIONS);
 }

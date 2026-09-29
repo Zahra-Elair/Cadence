@@ -2,17 +2,6 @@ export type ToolName = "list_events" | "create_event" | "update_event" | "delete
 
 export const WRITE_TOOLS: ToolName[] = ["create_event", "update_event", "delete_event"];
 
-export interface Part {
-  text?: string;
-  functionCall?: { name: string; args: Record<string, unknown> };
-  functionResponse?: { name: string; response: Record<string, unknown> };
-}
-
-export interface ChatContent {
-  role: "user" | "model";
-  parts: Part[];
-}
-
 export interface PendingWrite {
   tool: "create_event" | "update_event" | "delete_event";
   args: Record<string, unknown>;
