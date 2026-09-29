@@ -34,4 +34,18 @@ describe("validateWriteArgs", () => {
     const r = validateWriteArgs("update_event", { eventId: "abc", start: "2026-09-25T13:00:00Z" });
     expect(r.ok).toBe(false);
   });
+  it("update_event: end before start is rejected", () => {
+    const r = validateWriteArgs("update_event", {
+      eventId: "abc", start: "2026-09-25T14:00:00Z", end: "2026-09-25T13:00:00Z",
+    });
+    expect(r.ok).toBe(false);
+  });
+  it("update_event: missing eventId is rejected", () => {
+    expect(validateWriteArgs("update_event", { title: "x" }).ok).toBe(false);
+  });
+  it("update_event: valid start/end pair is accepted", () => {
+    expect(validateWriteArgs("update_event", {
+      eventId: "abc", start: "2026-09-25T13:00:00Z", end: "2026-09-25T14:00:00Z",
+    })).toEqual({ ok: true });
+  });
 });
