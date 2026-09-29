@@ -1,19 +1,10 @@
 import { signIn } from "@/auth";
+import { Button } from "@/components/ui/button";
 
-export function SignInButton() {
+export function SignInButton({ label = "Continue with Google" }: { label?: string }) {
   return (
-    <form
-      action={async () => {
-        "use server";
-        await signIn("google", { redirectTo: "/dashboard" });
-      }}
-    >
-      <button
-        type="submit"
-        className="rounded-lg bg-black px-5 py-2.5 text-white hover:bg-gray-800"
-      >
-        Sign in with Google
-      </button>
+    <form action={async () => { "use server"; await signIn("google", { redirectTo: "/dashboard" }); }}>
+      <Button type="submit" size="lg">{label}</Button>
     </form>
   );
 }

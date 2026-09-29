@@ -1,19 +1,10 @@
 import { signOut } from "@/auth";
+import { Button } from "@/components/ui/button";
 
-export function SignOutButton() {
+export function SignOutButton({ className }: { className?: string }) {
   return (
-    <form
-      action={async () => {
-        "use server";
-        await signOut({ redirectTo: "/" });
-      }}
-    >
-      <button
-        type="submit"
-        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-      >
-        Sign out
-      </button>
+    <form className={className} action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
+      <Button type="submit" variant="ghost" className="w-full justify-start px-2">Sign out</Button>
     </form>
   );
 }
