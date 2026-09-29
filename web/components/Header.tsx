@@ -21,7 +21,7 @@ export function Header({ user }: { user: { name?: string | null; email?: string 
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <Link href="/dashboard" className="flex items-center gap-2 font-medium">
           <CalendarClock className="h-5 w-5 text-primary" />
-          <span>Calendar Summarizer</span>
+          <span className="hidden sm:inline">Calendar Summarizer</span>
         </Link>
         <nav className="flex items-center gap-1">
           {NAV.map((n) => (

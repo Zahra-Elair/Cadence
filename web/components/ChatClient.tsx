@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ModelMessage } from "ai";
 import type { PendingWrite } from "@/lib/chat/types";
 import { sendChatMessage, confirmWrite, declineWrite, type ChatResult } from "@/lib/chat-actions";
@@ -39,6 +39,11 @@ export function ChatClient() {
   const [pending, setPending] = useState<PendingWrite | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, pending, busy]);
 
   function apply(res: ChatResult) {
     if (!res.ok) { setError(res.error); return; }
@@ -82,7 +87,7 @@ export function ChatClient() {
     <div className="flex flex-col gap-4">
       <ScrollArea className="h-[60vh] rounded-xl border p-4">
         {bubbles.length === 0 && !busy && (
-          <p className="py-16 text-center text-sm text-muted-foreground">Ask about your schedule — e.g. "what's on today?" or "add lunch with Sam Thursday at 1pm".</p>
+          <p className="py-16 text-center text-sm text-muted-foreground">{`Ask about your schedule — e.g. "what's on today?" or "add lunch with Sam Thursday at 1pm".`}</p>
         )}
         <div className="space-y-3">
           {bubbles.map((b, i) => (
@@ -95,6 +100,7 @@ export function ChatClient() {
           ))}
           {pending && <ConfirmWriteCard pending={pending} busy={busy} onConfirm={onConfirm} onCancel={onCancel} />}
           {busy && !pending && <p className="text-sm text-muted-foreground">Thinking…</p>}
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
