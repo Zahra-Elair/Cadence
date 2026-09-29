@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { DateTime } from "luxon";
 import { signIn } from "next-auth/react";
 import type { Period } from "@/lib/engine/types";
@@ -21,6 +21,7 @@ const TABS: { value: Period; label: string }[] = [
 export function DashboardClient() {
   const [state, dispatch] = useReducer(summaryReducer, undefined, () => initialSummaryState("weekly"));
   const period = state.period;
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!shouldFetch(state, period)) return;
@@ -34,7 +35,7 @@ export function DashboardClient() {
       })
       .catch(() => dispatch({ type: "error", period, error: "Couldn't reach the server. Please try again.", needsSignIn: false }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period]);
+  }, [period, reloadKey]);
 
   const cell = state.byPeriod[period];
 
@@ -58,8 +59,10 @@ export function DashboardClient() {
         <Alert variant="destructive">
           <AlertDescription className="space-y-3">
             <p>{cell.error}</p>
-            {cell.needsSignIn && (
+            {cell.needsSignIn ? (
               <Button onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
+            ) : (
+              <Button variant="outline" onClick={() => setReloadKey((k) => k + 1)}>Try again</Button>
             )}
           </AlertDescription>
         </Alert>

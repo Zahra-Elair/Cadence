@@ -92,7 +92,7 @@ export function ChatClient() {
         <div className="space-y-3">
           {bubbles.map((b, i) => (
             <div key={i} className={cn("flex", b.role === "user" ? "justify-end" : "justify-start")}>
-              <span className={cn("inline-block max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm",
+              <span className={cn("inline-block max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm",
                 b.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
                 {b.text}
               </span>
