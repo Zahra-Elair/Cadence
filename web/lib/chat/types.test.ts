@@ -9,6 +9,15 @@ describe("summarizeWrite", () => {
     expect(s).toContain("Lunch");
   });
 
+  it("formats the time compactly from the ISO offset (no raw ISO, seconds, or slashes)", () => {
+    const s = summarizeWrite("create_event", {
+      title: "Hair", start: "2026-09-30T17:00:00+01:00", end: "2026-09-30T18:00:00+01:00",
+    });
+    expect(s).toMatch(/5\s*–\s*6 PM/); // wall-clock 17:00–18:00 → 5–6 PM, server-tz-independent
+    expect(s).not.toContain(":00:00");
+    expect(s).not.toContain("/");
+  });
+
   it("delete shows the human-readable title, never the raw id", () => {
     const s = summarizeWrite("delete_event", {
       eventId: "ml1cp26gnl8tgaf0rep8s94vcg", eventTitle: "Nails appointment",
