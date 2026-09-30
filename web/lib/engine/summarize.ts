@@ -25,7 +25,7 @@ function emptySummary(period: Period, startISO: string, endISO: string): Summary
 
 export async function summarize(
   events: CalEvent[], period: Period, startISO: string, endISO: string,
-  opts: { model?: LanguageModel } = {},
+  opts: { model?: LanguageModel; zone?: string } = {},
 ): Promise<Summary> {
   if (events.length === 0) return emptySummary(period, startISO, endISO);
 
@@ -39,7 +39,7 @@ export async function summarize(
     throw err;
   }
 
-  const prompt = buildPrompt(events, period, startISO, endISO);
+  const prompt = buildPrompt(events, period, startISO, endISO, opts.zone ?? "UTC");
   try {
     const { object } = await generateObject({ model, schema: summarySchema, prompt, providerOptions: GENERATION_PROVIDER_OPTIONS });
     return { period, start: startISO, end: endISO, ...object, empty: false };

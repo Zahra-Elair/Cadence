@@ -37,4 +37,13 @@ describe("buildPrompt", () => {
     expect(p).toContain("Standup");
     expect(p).toContain("0.2"); // 15 min rounded
   });
+
+  it("renders event times in the user's timezone, not UTC", () => {
+    // 16:00Z is 17:00 in Africa/Lagos (+01:00): the model must see the local time.
+    const events = [ev("Hair", "2026-09-30T16:00:00Z", "2026-09-30T17:00:00Z")];
+    const p = buildPrompt(events, "daily", "2026-09-30", "2026-10-01", "Africa/Lagos");
+    expect(p).toContain("17:00:00+01:00");
+    expect(p).not.toContain("16:00:00.000Z");
+    expect(p).toContain("Africa/Lagos");
+  });
 });

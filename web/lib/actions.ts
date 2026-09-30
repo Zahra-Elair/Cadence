@@ -25,7 +25,7 @@ export async function generateSummary(
     const { events, startISO, endISO } = await fetchCalendarEvents(
       accessToken, input.period, input.date, input.zone,
     );
-    const summary = await summarize(events, input.period, startISO, endISO);
+    const summary = await summarize(events, input.period, startISO, endISO, { zone: input.zone });
     return { ok: true, summary };
   } catch (err: unknown) {
     if ((err as { code?: string })?.code === "AUTH_EXPIRED") {

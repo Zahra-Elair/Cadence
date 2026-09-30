@@ -1,4 +1,13 @@
+import { DateTime } from "luxon";
 import type { CalEvent, Period } from "./types";
+
+/** Render an absolute instant as an ISO string in the user's timezone, so the
+ *  model reads local wall-clock times. Date.toISOString() is always UTC, which
+ *  would silently shift every time by the user's offset. */
+function toLocalISO(d: Date, zone: string): string {
+  const dt = DateTime.fromJSDate(d).setZone(zone);
+  return dt.isValid ? dt.toISO({ suppressMilliseconds: true })! : d.toISOString();
+}
 
 function roundHalfToEven(value: number, decimals = 1): number {
   const factor = 10 ** decimals;
@@ -20,8 +29,10 @@ export function totalScheduledHours(events: CalEvent[]): number {
   return roundHalfToEven(totalMs / 3_600_000, 1);
 }
 
-function formatEvent(e: CalEvent): string {
-  const when = `${e.start.toISOString()}–${e.end.toISOString()}`;
+function formatEvent(e: CalEvent, zone: string): string {
+  const when = e.allDay
+    ? `${toLocalISO(e.start, zone).slice(0, 10)} (all day)`
+    : `${toLocalISO(e.start, zone)}–${toLocalISO(e.end, zone)}`;
   const parts = [when, e.title];
   if (e.location) parts.push(`@ ${e.location}`);
   if (e.attendees.length) parts.push(`with ${e.attendees.join(", ")}`);
@@ -29,13 +40,14 @@ function formatEvent(e: CalEvent): string {
 }
 
 export function buildPrompt(
-  events: CalEvent[], period: Period, startISO: string, endISO: string,
+  events: CalEvent[], period: Period, startISO: string, endISO: string, zone = "UTC",
 ): string {
-  const eventsBlock = events.length ? events.map(formatEvent).join("\n") : "(no events)";
+  const eventsBlock = events.length ? events.map((e) => formatEvent(e, zone)).join("\n") : "(no events)";
   const hours = totalScheduledHours(events);
   return [
     "You are a helpful assistant that summarizes a person's calendar.",
     `Write a ${period} summary for the period ${startISO} (inclusive) to ${endISO} (exclusive).`,
+    `All event times below are in the user's timezone (${zone}); read and report them exactly as written — do not shift them by any offset.`,
     "",
     `Total scheduled hours (computed for you, use it — do not invent numbers): ${hours}`,
     `Number of events: ${events.length}`,
