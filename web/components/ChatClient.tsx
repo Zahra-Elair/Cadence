@@ -12,6 +12,7 @@ import {
 import { signIn } from "next-auth/react";
 import { ConfirmWriteCard } from "./ConfirmWriteCard";
 import { BatchConfirmWriteCard, type WriteItem } from "./BatchConfirmWriteCard";
+import { WriteTrace } from "./WriteTrace";
 import { Markdown } from "./Markdown";
 import { WRITE_TOOLS, type ToolName } from "@/lib/chat/types";
 import { executeWrite } from "@/lib/chat-actions";
@@ -144,6 +145,17 @@ export function ChatClient() {
                         )}
                       </div>
                     );
+                  }
+                  // A resolved write leaves a permanent, factual trace in the chat,
+                  // rendered from the tool's actual result rather than the model's words.
+                  if (isToolUIPart(part) && part.state === "output-available") {
+                    const name = getToolName(part);
+                    if (isWriteTool(name)) {
+                      const w = part as ToolUIPart;
+                      return (
+                        <WriteTrace key={i} tool={name} input={(w.input ?? {}) as Record<string, unknown>} output={w.output} />
+                      );
+                    }
                   }
                   return null;
                 })}

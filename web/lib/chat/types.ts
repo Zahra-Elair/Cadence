@@ -45,10 +45,12 @@ function fmtRange(startISO?: string, endISO?: string): string {
   return `${fmtDay(s)}, ${fmtTime(s, !sameMeridiem)} – ${fmtTime(e)}`;
 }
 
-export function summarizeWrite(tool: ToolName, args: Record<string, unknown>): string {
+/** Human-readable one-liner for a write. `past` yields "Created/Updated/Deleted"
+ *  for a completed-action trace; the default imperative is for confirm prompts. */
+export function summarizeWrite(tool: ToolName, args: Record<string, unknown>, past = false): string {
   const a = args as Record<string, string>;
   if (tool === "create_event") {
-    const base = `Create "${a.title}" · ${fmtRange(a.start, a.end)}`;
+    const base = `${past ? "Created" : "Create"} "${a.title}" · ${fmtRange(a.start, a.end)}`;
     const rec = (args as { recurrence?: Recurrence }).recurrence;
     return rec ? `${base} · ${describeRecurrence(rec)}` : base;
   }
@@ -57,8 +59,8 @@ export function summarizeWrite(tool: ToolName, args: Record<string, unknown>): s
     const changes: string[] = [];
     if (a.title) changes.push(`rename to "${a.title}"`);
     if (a.start) changes.push(fmtRange(a.start, a.end));
-    return `Update ${label}${changes.length ? ` → ${changes.join(", ")}` : ""}`;
+    return `${past ? "Updated" : "Update"} ${label}${changes.length ? ` → ${changes.join(", ")}` : ""}`;
   }
-  if (tool === "delete_event") return `Delete ${a.eventTitle ? `"${a.eventTitle}"` : "this event"}`;
+  if (tool === "delete_event") return `${past ? "Deleted" : "Delete"} ${a.eventTitle ? `"${a.eventTitle}"` : "this event"}`;
   return tool;
 }

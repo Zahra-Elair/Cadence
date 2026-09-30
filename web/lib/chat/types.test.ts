@@ -40,4 +40,10 @@ describe("summarizeWrite", () => {
     expect(s).toContain("Standup");
     expect(s).not.toContain("abc123xyz");
   });
+
+  it("past tense yields completed-action verbs for the chat trace", () => {
+    expect(summarizeWrite("create_event", { title: "Lunch", start: "2026-09-25T13:00:00Z", end: "2026-09-25T14:00:00Z" }, true)).toMatch(/^Created /);
+    expect(summarizeWrite("update_event", { eventId: "x", eventTitle: "Standup" }, true)).toMatch(/^Updated /);
+    expect(summarizeWrite("delete_event", { eventId: "x", eventTitle: "Nails" }, true)).toMatch(/^Deleted /);
+  });
 });
