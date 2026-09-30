@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "luxon";
 import { signIn } from "next-auth/react";
 import type { CalendarEvent } from "@/lib/calendar/layout";
@@ -20,14 +20,19 @@ export function CalendarClient() {
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const reqId = useRef(0);
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => anchor.plus({ days: i })), [anchor]);
   const todayISODate = DateTime.now().setZone(zone).toISODate()!;
   const weekStartISO = anchor.toISO()!;
 
   async function load() {
+    const id = ++reqId.current;
     setLoading(true); setError(null); setNeedsSignIn(false);
     const res = await fetchCalendarWeek(weekStartISO, zone);
+    if (id !== reqId.current) return;
     setLoading(false);
     if (res.ok) setEvents(res.events);
     else { setError(res.error); setNeedsSignIn(Boolean(res.needsSignIn)); }
@@ -35,6 +40,8 @@ export function CalendarClient() {
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [weekStartISO]);
 
   const rangeLabel = `${anchor.toFormat("d LLL")} – ${anchor.plus({ days: 6 }).toFormat("d LLL yyyy")}`;
+
+  if (!mounted) return <div className="h-[70vh] animate-pulse rounded-xl border" />;
 
   return (
     <div className="space-y-4">

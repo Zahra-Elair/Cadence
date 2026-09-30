@@ -83,7 +83,7 @@ export function EventDialog({ open, mode, initial, timeZone, onClose, onSaved }:
                   <AlertDialogDescription>“{initial.event?.title}” will be removed from your calendar.</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={remove}>Delete</AlertDialogAction>
+                  <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={remove}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

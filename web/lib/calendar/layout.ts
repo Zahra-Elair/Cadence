@@ -48,7 +48,7 @@ export function layoutDayEvents(
   while (i < timed.length) {
     let j = i;
     let clusterEnd = timed[i].en;
-    let lanesUsed = new Set<number>([laneOf.get(i)!]);
+    const lanesUsed = new Set<number>([laneOf.get(i)!]);
     while (j + 1 < timed.length && timed[j + 1].s < clusterEnd) {
       j += 1;
       clusterEnd = Math.max(clusterEnd, timed[j].en);
