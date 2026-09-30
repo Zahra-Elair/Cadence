@@ -152,7 +152,7 @@ export function ChatClient() {
 
   return (
     <div className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border bg-card">
-      <ScrollArea className="flex-1 px-4 py-5">
+      <ScrollArea className="min-h-0 flex-1 px-4 py-5">
         {empty ? (
           <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-5 px-2 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
