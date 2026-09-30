@@ -1,7 +1,8 @@
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { auth } from "@/auth";
 import { getGoogleAccessToken } from "@/lib/auth-token";
-import { resolveModel, GENERATION_PROVIDER_OPTIONS } from "@/lib/ai/provider";
+import { resolveModel, ProviderConfigError, GENERATION_PROVIDER_OPTIONS } from "@/lib/ai/provider";
+import { isQuota, isOverload } from "@/lib/ai/errors";
 import { buildTools } from "@/lib/chat/tools";
 import { buildSystem } from "@/lib/chat/system";
 
@@ -11,10 +12,25 @@ export async function POST(req: Request) {
   const token = await getGoogleAccessToken();
   if (!token) return new Response("Your session expired. Please sign in again.", { status: 401 });
 
-  const { messages, timeZone } = (await req.json()) as { messages: UIMessage[]; timeZone: string };
+  let body: { messages: UIMessage[]; timeZone: string };
+  try {
+    body = (await req.json()) as { messages: UIMessage[]; timeZone: string };
+  } catch {
+    return new Response("Invalid request body.", { status: 400 });
+  }
+  const { messages, timeZone } = body;
+
+  let model: ReturnType<typeof resolveModel>;
+  try {
+    model = resolveModel();
+  } catch (err) {
+    if (err instanceof ProviderConfigError)
+      return new Response("The assistant isn't configured on the server (missing or invalid AI provider settings).", { status: 500 });
+    throw err;
+  }
 
   const result = streamText({
-    model: resolveModel(),
+    model,
     system: buildSystem(timeZone ?? "UTC"),
     messages: await convertToModelMessages(messages),
     tools: buildTools(token, timeZone ?? "UTC"),
@@ -24,10 +40,10 @@ export async function POST(req: Request) {
 
   return result.toUIMessageStreamResponse({
     onError: (error) => {
-      const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
-      if (msg.includes("quota") || msg.includes("rate limit") || msg.includes("resource_exhausted"))
+      console.error("[chat stream] error:", error);
+      if (isQuota(error))
         return "Free-tier limit reached (it resets daily). Try again later, or switch AI_PROVIDER/AI_MODEL.";
-      if (msg.includes("overload") || msg.includes("unavailable")) return "The assistant is busy right now — please try again in a moment.";
+      if (isOverload(error)) return "The assistant is busy right now — please try again in a moment.";
       return "Something went wrong. Please try again.";
     },
   });

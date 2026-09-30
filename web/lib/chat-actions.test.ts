@@ -44,4 +44,33 @@ describe("executeWrite", () => {
     expect(res.ok).toBe(true);
     expect(updateEvent).toHaveBeenCalledOnce();
   });
+
+  it("rejects update_event with a missing eventId WITHOUT touching the calendar", async () => {
+    const res = await executeWrite("update_event", { title: "New" });
+    expect(res.ok).toBe(false);
+    expect(updateEvent).not.toHaveBeenCalled();
+    const empty = await executeWrite("update_event", { eventId: "", title: "New" });
+    expect(empty.ok).toBe(false);
+    expect(updateEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects delete_event with a missing eventId WITHOUT touching the calendar", async () => {
+    const res = await executeWrite("delete_event", {});
+    expect(res.ok).toBe(false);
+    expect(deleteEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown/read tool name without calling any write", async () => {
+    const res = await executeWrite("list_events" as Parameters<typeof executeWrite>[0], {});
+    expect(res.ok).toBe(false);
+    expect(createEvent).not.toHaveBeenCalled();
+    expect(updateEvent).not.toHaveBeenCalled();
+    expect(deleteEvent).not.toHaveBeenCalled();
+  });
+
+  it("maps an AUTH_EXPIRED error to needsSignIn", async () => {
+    createEvent.mockRejectedValueOnce(Object.assign(new Error("expired"), { code: "AUTH_EXPIRED" }));
+    const res = await executeWrite("create_event", { title: "Lunch", start: "2026-09-25T13:00:00Z", end: "2026-09-25T14:00:00Z" });
+    expect(res).toMatchObject({ ok: false, needsSignIn: true });
+  });
 });
