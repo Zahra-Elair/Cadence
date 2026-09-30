@@ -2,13 +2,6 @@ export type ToolName = "list_events" | "create_event" | "update_event" | "delete
 
 export const WRITE_TOOLS: ToolName[] = ["create_event", "update_event", "delete_event"];
 
-export interface PendingWrite {
-  tool: "create_event" | "update_event" | "delete_event";
-  args: Record<string, unknown>;
-  toolCallId: string;
-  summary: string;
-}
-
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 

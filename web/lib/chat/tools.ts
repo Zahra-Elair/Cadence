@@ -14,7 +14,7 @@ function toLocalISO(d: Date, timeZone: string): string {
  * Tools bound to the signed-in user's access token.
  * Reads (`list_events`) run automatically. Writes have NO `execute`, so the
  * model cannot perform them during generation — they surface as pending tool
- * calls the orchestrator turns into a confirmation.
+ * calls the client turns into a confirmation before calling `executeWrite`.
  */
 export function buildTools(token: string, timeZone: string): ToolSet {
   return {
