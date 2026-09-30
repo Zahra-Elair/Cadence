@@ -11,6 +11,7 @@ import {
 } from "ai";
 import { signIn } from "next-auth/react";
 import { ConfirmWriteCard } from "./ConfirmWriteCard";
+import { BatchConfirmWriteCard, type WriteItem } from "./BatchConfirmWriteCard";
 import { Markdown } from "./Markdown";
 import { WRITE_TOOLS, type ToolName } from "@/lib/chat/types";
 import { executeWrite } from "@/lib/chat-actions";
@@ -22,6 +23,17 @@ import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
+
+/** All write tool calls in a message still awaiting the user's confirmation. */
+function pendingWrites(m: UIMessage): WriteItem[] {
+  return m.parts.flatMap((p) => {
+    if (!isToolUIPart(p) || p.state !== "input-available") return [];
+    const name = getToolName(p);
+    if (!isWriteTool(name)) return [];
+    const w = p as ToolUIPart;
+    return [{ tool: name, toolCallId: w.toolCallId, args: (w.input ?? {}) as Record<string, unknown> }];
+  });
+}
 
 function looksLikeAuthError(message: string): boolean {
   const m = message.toLowerCase();
@@ -77,6 +89,26 @@ export function ChatClient() {
     await addToolOutput({ tool, toolCallId, output: { declined: true, note: "The user declined this action." } });
   }
 
+  // Batch confirm: run each write in order and record its result. Only the last
+  // addToolOutput completes the message's tool calls, so the auto-resend fires
+  // once. A failed write still records its error and the rest continue; the
+  // assistant's follow-up (which re-lists to verify) reports the real outcome.
+  async function onConfirmAll(items: WriteItem[]) {
+    setConfirmBusy(true);
+    for (const it of items) {
+      const res = await executeWrite(it.tool, it.args);
+      if (!res.ok && res.needsSignIn) setNeedsSignIn(true);
+      await addToolOutput({ tool: it.tool, toolCallId: it.toolCallId, output: res.ok ? res.output : { error: res.error } });
+    }
+    setConfirmBusy(false);
+  }
+
+  async function onCancelAll(items: WriteItem[]) {
+    for (const it of items) {
+      await addToolOutput({ tool: it.tool, toolCallId: it.toolCallId, output: { declined: true, note: "The user declined this action." } });
+    }
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
@@ -93,44 +125,48 @@ export function ChatClient() {
           <p className="py-16 text-center text-sm text-muted-foreground">{`Ask about your schedule — e.g. "what's on today?" or "add lunch with Sam Thursday at 1pm".`}</p>
         )}
         <div className="space-y-3">
-          {messages.map((m: UIMessage) => (
-            <div key={m.id} className="space-y-2">
-              {m.parts.map((part, i) => {
-                if (part.type === "text") {
-                  return (
-                    <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-                      {m.role === "user" ? (
-                        <span className="inline-block max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground">
-                          {part.text}
-                        </span>
-                      ) : (
-                        <div className="max-w-[80%] overflow-x-auto rounded-2xl bg-muted px-4 py-2 text-sm text-foreground">
-                          <Markdown>{part.text}</Markdown>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                if (isToolUIPart(part) && part.state === "input-available") {
-                  const name = getToolName(part);
-                  if (isWriteTool(name)) {
-                    const write = part as ToolUIPart;
+          {messages.map((m: UIMessage) => {
+            const writes = pendingWrites(m);
+            return (
+              <div key={m.id} className="space-y-2">
+                {m.parts.map((part, i) => {
+                  if (part.type === "text") {
                     return (
-                      <ConfirmWriteCard
-                        key={i}
-                        tool={name}
-                        args={(write.input ?? {}) as Record<string, unknown>}
-                        busy={confirmBusy}
-                        onConfirm={() => onConfirm(name, write.toolCallId, (write.input ?? {}) as Record<string, unknown>)}
-                        onCancel={() => onCancel(name, write.toolCallId)}
-                      />
+                      <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+                        {m.role === "user" ? (
+                          <span className="inline-block max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground">
+                            {part.text}
+                          </span>
+                        ) : (
+                          <div className="max-w-[80%] overflow-x-auto rounded-2xl bg-muted px-4 py-2 text-sm text-foreground">
+                            <Markdown>{part.text}</Markdown>
+                          </div>
+                        )}
+                      </div>
                     );
                   }
-                }
-                return null;
-              })}
-            </div>
-          ))}
+                  return null;
+                })}
+                {writes.length === 1 && (
+                  <ConfirmWriteCard
+                    tool={writes[0].tool}
+                    args={writes[0].args}
+                    busy={confirmBusy}
+                    onConfirm={() => onConfirm(writes[0].tool, writes[0].toolCallId, writes[0].args)}
+                    onCancel={() => onCancel(writes[0].tool, writes[0].toolCallId)}
+                  />
+                )}
+                {writes.length > 1 && (
+                  <BatchConfirmWriteCard
+                    items={writes}
+                    busy={confirmBusy}
+                    onConfirmAll={() => onConfirmAll(writes)}
+                    onCancelAll={() => onCancelAll(writes)}
+                  />
+                )}
+              </div>
+            );
+          })}
           {busy && !pendingWrite && <p className="text-sm text-muted-foreground">Thinking…</p>}
           <div ref={bottomRef} />
         </div>
