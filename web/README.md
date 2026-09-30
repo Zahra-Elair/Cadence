@@ -1,4 +1,4 @@
-# Calendar Summarizer — Web (Phase 3)
+# Cadence — Web
 
 Sign in with Google and get an AI summary of your real Google Calendar
 (daily / weekly / monthly), powered by the free tier of Google Gemini. Chat with your calendar — ask questions, create events, update or delete them.

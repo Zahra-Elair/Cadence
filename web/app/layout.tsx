@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Calendar Summarizer",
-  description: "AI summaries of your Google Calendar — daily, weekly, or monthly.",
+  title: "Cadence — AI calendar assistant",
+  description: "AI summaries and a chat assistant for your Google Calendar — see your week and manage events by chatting, with a confirmation step before anything changes.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
