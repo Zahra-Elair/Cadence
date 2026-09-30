@@ -50,6 +50,13 @@ export function CalendarClient() {
           <Button variant="outline" size="icon" aria-label="Previous week" onClick={() => setAnchor(anchor.minus({ weeks: 1 }))}><ChevronLeft className="h-4 w-4" /></Button>
           <Button variant="outline" onClick={() => setAnchor(DateTime.now().setZone(zone).startOf("week"))}>Today</Button>
           <Button variant="outline" size="icon" aria-label="Next week" onClick={() => setAnchor(anchor.plus({ weeks: 1 }))}><ChevronRight className="h-4 w-4" /></Button>
+          <input
+            type="date"
+            aria-label="Jump to a date"
+            value={anchor.toISODate()!}
+            onChange={(e) => { const d = DateTime.fromISO(e.target.value, { zone }); if (d.isValid) setAnchor(d.startOf("week")); }}
+            className="ml-1 h-9 rounded-md border bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:light] dark:[color-scheme:dark]"
+          />
           <span className="ml-1 text-sm font-medium">{rangeLabel}</span>
         </div>
         <Button onClick={() => setDialog({ mode: "create", dayISODate: todayISODate, hour: 9 })}><Plus className="mr-1 h-4 w-4" /> New event</Button>
