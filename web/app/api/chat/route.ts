@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
+import { streamText, smoothStream, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { auth } from "@/auth";
 import { getGoogleAccessToken } from "@/lib/auth-token";
 import { resolveModel, ProviderConfigError, GENERATION_PROVIDER_OPTIONS } from "@/lib/ai/provider";
@@ -36,6 +36,9 @@ export async function POST(req: Request) {
     tools: buildTools(token, timeZone ?? "UTC"),
     stopWhen: stepCountIs(8),
     providerOptions: GENERATION_PROVIDER_OPTIONS,
+    // Pace the stream to a readable word-by-word cadence — Groq's models emit
+    // tokens near-instantly, so without this the reply "types" too fast to read.
+    experimental_transform: smoothStream({ delayInMs: 25, chunking: "word" }),
   });
 
   return result.toUIMessageStreamResponse({
