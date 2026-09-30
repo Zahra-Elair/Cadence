@@ -19,5 +19,6 @@ export interface Summary {
   keyEvents: string[];
   timeBreakdown: string;
   highlights: string[];
+  eventCount: number; // total events in the period (not just the key ones listed)
   empty: boolean;
 }

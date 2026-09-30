@@ -19,7 +19,7 @@ function emptySummary(period: Period, startISO: string, endISO: string): Summary
   return {
     period, start: startISO, end: endISO,
     overview: "Nothing scheduled for this period.",
-    keyEvents: [], timeBreakdown: "0h scheduled", highlights: [], empty: true,
+    keyEvents: [], timeBreakdown: "0h scheduled", highlights: [], eventCount: 0, empty: true,
   };
 }
 
@@ -42,7 +42,7 @@ export async function summarize(
   const prompt = buildPrompt(events, period, startISO, endISO, opts.zone ?? "UTC");
   try {
     const { object } = await generateObject({ model, schema: summarySchema, prompt, providerOptions: GENERATION_PROVIDER_OPTIONS });
-    return { period, start: startISO, end: endISO, ...object, empty: false };
+    return { period, start: startISO, end: endISO, ...object, eventCount: events.length, empty: false };
   } catch (err: unknown) {
     if (isQuota(err)) {
       throw new QuotaExceededError("Free-tier quota/rate limit reached. Try again shortly.");

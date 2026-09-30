@@ -1,50 +1,41 @@
 import type { Summary } from "@/lib/engine/types";
-import { Badge } from "@/components/ui/badge";
 import { Markdown, MarkdownInline } from "@/components/Markdown";
 
 export function SummaryView({ summary }: { summary: Summary }) {
+  const events = `${summary.eventCount} ${summary.eventCount === 1 ? "event" : "events"}`;
   return (
     <div className="space-y-5">
       <Markdown className="prose-base">{summary.overview}</Markdown>
-      <div className="grid grid-cols-2 gap-3">
-        <Metric label="Scheduled" value={summary.timeBreakdown} />
-        <Metric label="Key events" value={String(summary.keyEvents.length)} />
-      </div>
-      <Section title="Key events" items={summary.keyEvents} />
-      {summary.highlights.length > 0 && (
+
+      <p className="text-sm text-muted-foreground">
+        {summary.timeBreakdown} · {events}
+      </p>
+
+      {summary.keyEvents.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Highlights</h3>
-          <div className="flex flex-wrap gap-2">
-            {summary.highlights.map((h, i) => <Badge key={i} variant="secondary"><MarkdownInline>{h}</MarkdownInline></Badge>)}
-          </div>
+          <h3 className="text-sm font-medium text-muted-foreground">Your schedule</h3>
+          <ul className="space-y-1.5">
+            {summary.keyEvents.map((it, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span><MarkdownInline>{it}</MarkdownInline></span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
-    </div>
-  );
-}
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-muted/50 p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-medium">{value}</p>
-    </div>
-  );
-}
-
-function Section({ title, items }: { title: string; items: string[] }) {
-  if (items.length === 0) return null;
-  return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-      <ul className="space-y-1.5">
-        {items.map((it, i) => (
-          <li key={i} className="flex gap-2 text-sm">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-            <span><MarkdownInline>{it}</MarkdownInline></span>
-          </li>
-        ))}
-      </ul>
+      {summary.highlights.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Worth noting: </span>
+          {summary.highlights.map((h, i) => (
+            <span key={i}>
+              {i > 0 && " · "}
+              <MarkdownInline>{h}</MarkdownInline>
+            </span>
+          ))}
+        </p>
+      )}
     </div>
   );
 }
