@@ -21,9 +21,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { Send } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
+
+const SUGGESTIONS = [
+  "What's on today?",
+  "Summarize my week",
+  "Add lunch with Sam Thursday at 1pm",
+  "Clear Friday afternoon",
+];
 
 /** All write tool calls in a message still awaiting the user's confirmation. */
 function pendingWrites(m: UIMessage): WriteItem[] {
@@ -39,6 +46,24 @@ function pendingWrites(m: UIMessage): WriteItem[] {
 function looksLikeAuthError(message: string): boolean {
   const m = message.toLowerCase();
   return m.includes("sign in") || m.includes("session expired") || m.includes("session or calendar permission");
+}
+
+function AssistantAvatar() {
+  return (
+    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <Sparkles className="h-4 w-4" />
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm bg-muted px-4 py-3">
+      {["0s", "0.15s", "0.3s"].map((d) => (
+        <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: d }} />
+      ))}
+    </div>
+  );
 }
 
 export function ChatClient() {
@@ -110,105 +135,151 @@ export function ChatClient() {
     }
   }
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || busy || pendingWrite) return;
+  function send(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || busy || pendingWrite) return;
     setInput("");
     setNeedsSignIn(false);
-    void sendMessage({ text });
+    void sendMessage({ text: trimmed });
   }
 
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    send(input);
+  }
+
+  const empty = messages.length === 0 && !busy;
+
   return (
-    <div className="flex flex-col gap-4">
-      <ScrollArea className="h-[60vh] rounded-xl border p-4">
-        {messages.length === 0 && !busy && (
-          <p className="py-16 text-center text-sm text-muted-foreground">{`Ask about your schedule — e.g. "what's on today?" or "add lunch with Sam Thursday at 1pm".`}</p>
-        )}
-        <div className="space-y-3">
-          {messages.map((m: UIMessage) => {
-            const writes = pendingWrites(m);
-            return (
-              <div key={m.id} className="space-y-2">
-                {m.parts.map((part, i) => {
-                  if (part.type === "text") {
-                    return (
-                      <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-                        {m.role === "user" ? (
-                          <span className="inline-block max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground">
+    <div className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border bg-card">
+      <ScrollArea className="flex-1 px-4 py-5">
+        {empty ? (
+          <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-5 px-2 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg font-medium">How can I help with your calendar?</p>
+              <p className="text-sm text-muted-foreground">Ask about your schedule, or tell me what to add, move, or clear.</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => send(s)}
+                  className="rounded-full border bg-background px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((m: UIMessage) => {
+              const writes = pendingWrites(m);
+              const isUser = m.role === "user";
+              return (
+                <div key={m.id} className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
+                  {!isUser && <AssistantAvatar />}
+                  <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-2", isUser ? "items-end" : "items-start")}>
+                    {m.parts.map((part, i) => {
+                      if (part.type === "text") {
+                        return isUser ? (
+                          <span key={i} className="inline-block whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm text-primary-foreground">
                             {part.text}
                           </span>
                         ) : (
-                          <div className="max-w-[80%] overflow-x-auto rounded-2xl bg-muted px-4 py-2 text-sm text-foreground">
+                          <div key={i} className="max-w-full overflow-x-auto rounded-2xl rounded-tl-sm bg-muted px-4 py-2 text-sm text-foreground">
                             <Markdown>{part.text}</Markdown>
                           </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  // A resolved write leaves a permanent, factual trace in the chat,
-                  // rendered from the tool's actual result rather than the model's words.
-                  if (isToolUIPart(part) && part.state === "output-available") {
-                    const name = getToolName(part);
-                    if (isWriteTool(name)) {
-                      const w = part as ToolUIPart;
-                      return (
-                        <WriteTrace key={i} tool={name} input={(w.input ?? {}) as Record<string, unknown>} output={w.output} />
-                      );
-                    }
-                  }
-                  return null;
-                })}
-                {writes.length === 1 && (
-                  <ConfirmWriteCard
-                    tool={writes[0].tool}
-                    args={writes[0].args}
-                    busy={confirmBusy}
-                    onConfirm={() => onConfirm(writes[0].tool, writes[0].toolCallId, writes[0].args)}
-                    onCancel={() => onCancel(writes[0].tool, writes[0].toolCallId)}
-                  />
-                )}
-                {writes.length > 1 && (
-                  <BatchConfirmWriteCard
-                    items={writes}
-                    busy={confirmBusy}
-                    onConfirmAll={() => onConfirmAll(writes)}
-                    onCancelAll={() => onCancelAll(writes)}
-                  />
-                )}
+                        );
+                      }
+                      // A resolved write leaves a permanent, factual trace in the chat,
+                      // rendered from the tool's actual result rather than the model's words.
+                      if (isToolUIPart(part) && part.state === "output-available") {
+                        const name = getToolName(part);
+                        if (isWriteTool(name)) {
+                          const w = part as ToolUIPart;
+                          return (
+                            <WriteTrace key={i} tool={name} input={(w.input ?? {}) as Record<string, unknown>} output={w.output} />
+                          );
+                        }
+                      }
+                      return null;
+                    })}
+                    {writes.length === 1 && (
+                      <ConfirmWriteCard
+                        tool={writes[0].tool}
+                        args={writes[0].args}
+                        busy={confirmBusy}
+                        onConfirm={() => onConfirm(writes[0].tool, writes[0].toolCallId, writes[0].args)}
+                        onCancel={() => onCancel(writes[0].tool, writes[0].toolCallId)}
+                      />
+                    )}
+                    {writes.length > 1 && (
+                      <BatchConfirmWriteCard
+                        items={writes}
+                        busy={confirmBusy}
+                        onConfirmAll={() => onConfirmAll(writes)}
+                        onCancelAll={() => onCancelAll(writes)}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {busy && !pendingWrite && (
+              <div className="flex justify-start gap-3">
+                <AssistantAvatar />
+                <TypingDots />
               </div>
-            );
-          })}
-          {busy && !pendingWrite && <p className="text-sm text-muted-foreground">Thinking…</p>}
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription className="flex items-center justify-between gap-3">
-            <span>{error.message}</span>
-            {needsSignIn && (
-              <Button size="sm" onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
             )}
-          </AlertDescription>
-        </Alert>
-      )}
-      {!error && needsSignIn && (
-        <Alert variant="destructive">
-          <AlertDescription className="flex items-center justify-between gap-3">
-            <span>Your Google session or calendar permission needs a refresh.</span>
-            <Button size="sm" onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      <form onSubmit={submit} className="flex gap-2">
-        <Input value={input} onChange={(e) => setInput(e.target.value)} disabled={busy || pendingWrite}
-          placeholder="Message the assistant…" />
-        <Button type="submit" size="icon" disabled={busy || pendingWrite || !input.trim()} aria-label="Send">
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
-      {pendingWrite && <p className="text-xs text-muted-foreground">Confirm or cancel the pending action to continue.</p>}
+            <div ref={bottomRef} />
+          </div>
+        )}
+      </ScrollArea>
+
+      <div className="space-y-3 border-t bg-background/40 p-3">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription className="flex items-center justify-between gap-3">
+              <span>{error.message}</span>
+              {needsSignIn && (
+                <Button size="sm" onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        {!error && needsSignIn && (
+          <Alert variant="destructive">
+            <AlertDescription className="flex items-center justify-between gap-3">
+              <span>Your Google session or calendar permission needs a refresh.</span>
+              <Button size="sm" onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        <form onSubmit={submit} className="relative">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={busy || pendingWrite}
+            placeholder="Message Cadence…"
+            className="h-12 rounded-full pr-12"
+          />
+          <Button
+            type="submit"
+            size="icon"
+            disabled={busy || pendingWrite || !input.trim()}
+            aria-label="Send"
+            className="absolute right-1.5 top-1.5 h-9 w-9 rounded-full"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+        {pendingWrite && <p className="text-center text-xs text-muted-foreground">Confirm or cancel the pending action to continue.</p>}
+      </div>
     </div>
   );
 }

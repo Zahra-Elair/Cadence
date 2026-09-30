@@ -22,7 +22,10 @@ export default async function AssistantPage() {
     <>
       <Header user={{ name: session.user?.name, email: session.user?.email, image: session.user?.image }} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <h1 className="mb-6 text-2xl font-medium">Assistant</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-medium">Assistant</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Ask about your schedule or make changes in plain language — every change is confirmed first.</p>
+        </div>
         <ChatClient />
       </main>
     </>
