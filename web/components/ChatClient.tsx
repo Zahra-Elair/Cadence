@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
@@ -21,9 +21,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 
-// Created once: the per-send body (timeZone) is supplied on each sendMessage call.
-const transport = new DefaultChatTransport({ api: "/api/chat" });
-
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
 
 function looksLikeAuthError(message: string): boolean {
@@ -37,6 +34,11 @@ export function ChatClient() {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // timeZone rides the transport body so EVERY request carries it — including the
+  // sendAutomaticallyWhen-triggered resubmit after addToolOutput, which sends no
+  // per-call options. useMemo keyed on zone keeps the transport identity stable.
+  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat", body: { timeZone: zone } }), [zone]);
 
   // sendAutomaticallyWhen is REQUIRED: after addToolOutput records the confirmed
   // write result, this resubmits the conversation so the assistant streams its
@@ -81,7 +83,7 @@ export function ChatClient() {
     if (!text || busy || pendingWrite) return;
     setInput("");
     setNeedsSignIn(false);
-    void sendMessage({ text }, { body: { timeZone: zone } });
+    void sendMessage({ text });
   }
 
   return (
