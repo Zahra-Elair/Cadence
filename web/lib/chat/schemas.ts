@@ -10,13 +10,32 @@ export const listEventsSchema = z.object({
   timeMax: isoDateTime.describe("End of the range, ISO 8601 with timezone offset."),
 });
 
+export const recurrenceSchema = z
+  .object({
+    frequency: z.enum(["daily", "weekly", "monthly"]).describe("How often the event repeats."),
+    interval: z.number().int().min(1).max(52).optional().describe("Repeat every N periods (default 1)."),
+    weekdays: z
+      .array(z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"]))
+      .optional()
+      .describe('For weekly recurrence, the weekdays it lands on, e.g. ["MO","TU","WE","TH","FR"] for every weekday.'),
+    until: isoDateTime.optional().describe("Inclusive end date of the series (ISO 8601). Use this OR count, not both."),
+    count: z.number().int().min(1).max(365).optional().describe("Number of occurrences. Use this OR until, not both."),
+  })
+  .refine((r) => !(r.until !== undefined && r.count !== undefined), {
+    message: "set only one of until or count",
+    path: ["until"],
+  });
+
 export const createEventSchema = z
   .object({
     title: z.string().trim().min(1).describe("Event title."),
-    start: isoDateTime.describe("ISO 8601 with offset."),
-    end: isoDateTime.describe("ISO 8601 with offset."),
+    start: isoDateTime.describe("ISO 8601 with offset. For a recurring event, this is the first occurrence."),
+    end: isoDateTime.describe("ISO 8601 with offset. For a recurring event, this is the first occurrence's end."),
     location: z.string().optional(),
     description: z.string().optional(),
+    recurrence: recurrenceSchema
+      .optional()
+      .describe("Set to make this a single repeating event instead of creating many separate events."),
   })
   .refine((a) => Date.parse(a.end) > Date.parse(a.start), {
     message: "end must be after start",

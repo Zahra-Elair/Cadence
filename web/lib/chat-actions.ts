@@ -5,11 +5,13 @@ import { getGoogleAccessToken } from "./auth-token";
 import { isQuota, isOverload } from "./ai/errors";
 import { validateWriteArgs } from "./chat/schemas";
 import type { ToolName } from "./chat/types";
+import { buildRRule, type Recurrence } from "./chat/recurrence";
 import { createEvent, updateEvent, deleteEvent } from "./google-calendar";
 
 export async function executeWrite(
   tool: ToolName,
   args: Record<string, unknown>,
+  timeZone: string = "UTC",
 ): Promise<{ ok: true; output: Record<string, unknown> } | { ok: false; error: string; needsSignIn?: boolean }> {
   const session = await auth();
   if (!session) return { ok: false, error: "Please sign in.", needsSignIn: true };
@@ -22,7 +24,9 @@ export async function executeWrite(
   const a = args as Record<string, string>;
   try {
     if (tool === "create_event") {
-      const output = await createEvent(token, { title: a.title, start: a.start, end: a.end, location: a.location, description: a.description });
+      const rec = (args as { recurrence?: Recurrence }).recurrence;
+      const recurrence = rec ? [buildRRule(rec, timeZone)] : undefined;
+      const output = await createEvent(token, { title: a.title, start: a.start, end: a.end, location: a.location, description: a.description, recurrence });
       return { ok: true, output };
     }
     if (tool === "update_event") {

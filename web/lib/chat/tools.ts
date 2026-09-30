@@ -39,7 +39,7 @@ export function buildTools(token: string, timeZone: string): ToolSet {
     }),
     create_event: tool({
       description:
-        "Create a new calendar event. Resolve relative dates to concrete ISO 8601 datetimes with the user's timezone offset.",
+        "Create a new calendar event. Resolve relative dates to concrete ISO 8601 datetimes with the user's timezone offset. For a repeating event (every day, every weekday, weekly, monthly), set `recurrence` and let start/end be the FIRST occurrence — do NOT create one event per day.",
       inputSchema: createEventSchema,
       // No execute: human-in-the-loop confirmation required.
     }),

@@ -69,6 +69,7 @@ export interface CreateEventInput {
   location?: string;
   description?: string;
   attendees?: string[];
+  recurrence?: string[]; // RFC-5545 RRULE lines, e.g. ["RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=5"]
 }
 export interface UpdateEventPatch {
   title?: string;
@@ -105,6 +106,9 @@ function toGoogleBody(input: CreateEventInput | UpdateEventPatch): Record<string
   if (input.end !== undefined) body.end = { dateTime: input.end };
   if ("attendees" in input && input.attendees?.length) {
     body.attendees = input.attendees.map((email) => ({ email }));
+  }
+  if ("recurrence" in input && input.recurrence?.length) {
+    body.recurrence = input.recurrence;
   }
   return body;
 }

@@ -76,7 +76,7 @@ export function ChatClient() {
 
   async function onConfirm(tool: ToolName, toolCallId: string, args: Record<string, unknown>) {
     setConfirmBusy(true);
-    const res = await executeWrite(tool, args);
+    const res = await executeWrite(tool, args, zone);
     setConfirmBusy(false);
     if (!res.ok && res.needsSignIn) setNeedsSignIn(true);
     // Record the result on the tool call. With sendAutomaticallyWhen set, this
@@ -96,7 +96,7 @@ export function ChatClient() {
   async function onConfirmAll(items: WriteItem[]) {
     setConfirmBusy(true);
     for (const it of items) {
-      const res = await executeWrite(it.tool, it.args);
+      const res = await executeWrite(it.tool, it.args, zone);
       if (!res.ok && res.needsSignIn) setNeedsSignIn(true);
       await addToolOutput({ tool: it.tool, toolCallId: it.toolCallId, output: res.ok ? res.output : { error: res.error } });
     }

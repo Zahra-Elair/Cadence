@@ -1,3 +1,5 @@
+import { describeRecurrence, type Recurrence } from "./recurrence";
+
 export type ToolName = "list_events" | "create_event" | "update_event" | "delete_event";
 
 export const WRITE_TOOLS: ToolName[] = ["create_event", "update_event", "delete_event"];
@@ -45,7 +47,11 @@ function fmtRange(startISO?: string, endISO?: string): string {
 
 export function summarizeWrite(tool: ToolName, args: Record<string, unknown>): string {
   const a = args as Record<string, string>;
-  if (tool === "create_event") return `Create "${a.title}" · ${fmtRange(a.start, a.end)}`;
+  if (tool === "create_event") {
+    const base = `Create "${a.title}" · ${fmtRange(a.start, a.end)}`;
+    const rec = (args as { recurrence?: Recurrence }).recurrence;
+    return rec ? `${base} · ${describeRecurrence(rec)}` : base;
+  }
   if (tool === "update_event") {
     const label = a.eventTitle ? `"${a.eventTitle}"` : "this event";
     const changes: string[] = [];
