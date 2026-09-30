@@ -1,6 +1,7 @@
 import { generateObject, type LanguageModel } from "ai";
 import { z } from "zod";
-import type { CalEvent, Period, Summary } from "./types";
+import { DateTime } from "luxon";
+import type { CalEvent, Period, ScheduleEvent, Summary } from "./types";
 import { buildPrompt } from "./prompt";
 import { SummarizerError, MissingApiKeyError, QuotaExceededError } from "./errors";
 import { resolveModel, ProviderConfigError, GENERATION_PROVIDER_OPTIONS } from "../ai/provider";
@@ -19,8 +20,17 @@ function emptySummary(period: Period, startISO: string, endISO: string): Summary
   return {
     period, start: startISO, end: endISO,
     overview: "Nothing scheduled for this period.",
-    keyEvents: [], timeBreakdown: "0h scheduled", highlights: [], eventCount: 0, empty: true,
+    keyEvents: [], timeBreakdown: "0h scheduled", highlights: [], eventCount: 0, events: [], empty: true,
   };
+}
+
+/** Serialize events to the user's timezone (ISO with offset) for the schedule card. */
+function toSchedule(events: CalEvent[], zone: string): ScheduleEvent[] {
+  const iso = (d: Date) => {
+    const dt = DateTime.fromJSDate(d).setZone(zone);
+    return dt.isValid ? dt.toISO({ suppressMilliseconds: true })! : d.toISOString();
+  };
+  return events.map((e) => ({ title: e.title, start: iso(e.start), end: iso(e.end), allDay: e.allDay, location: e.location }));
 }
 
 export async function summarize(
@@ -42,7 +52,7 @@ export async function summarize(
   const prompt = buildPrompt(events, period, startISO, endISO, opts.zone ?? "UTC");
   try {
     const { object } = await generateObject({ model, schema: summarySchema, prompt, providerOptions: GENERATION_PROVIDER_OPTIONS });
-    return { period, start: startISO, end: endISO, ...object, eventCount: events.length, empty: false };
+    return { period, start: startISO, end: endISO, ...object, eventCount: events.length, events: toSchedule(events, opts.zone ?? "UTC"), empty: false };
   } catch (err: unknown) {
     if (isQuota(err)) {
       throw new QuotaExceededError("Free-tier quota/rate limit reached. Try again shortly.");

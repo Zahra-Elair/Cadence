@@ -3,7 +3,7 @@ import { initialSummaryState, summaryReducer, shouldFetch } from "./summary-stat
 import type { Summary } from "@/lib/engine/types";
 
 const sum = (overview: string): Summary => ({
-  period: "weekly", start: "s", end: "e", overview, keyEvents: [], timeBreakdown: "1h", highlights: [], eventCount: 0, empty: false,
+  period: "weekly", start: "s", end: "e", overview, keyEvents: [], timeBreakdown: "1h", highlights: [], eventCount: 0, events: [], empty: false,
 });
 
 describe("summary-state", () => {

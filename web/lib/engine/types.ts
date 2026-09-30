@@ -11,6 +11,15 @@ export interface CalEvent {
   description?: string;
 }
 
+/** A calendar event serialized for the client, times as ISO with the user's offset. */
+export interface ScheduleEvent {
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  location?: string;
+}
+
 export interface Summary {
   period: Period;
   start: string; // ISO date (inclusive)
@@ -20,5 +29,6 @@ export interface Summary {
   timeBreakdown: string;
   highlights: string[];
   eventCount: number; // total events in the period (not just the key ones listed)
+  events: ScheduleEvent[]; // the actual events, for the schedule card
   empty: boolean;
 }
