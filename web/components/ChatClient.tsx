@@ -8,6 +8,7 @@ import {
   getToolName,
   type UIMessage,
   type ToolUIPart,
+  type FileUIPart,
 } from "ai";
 import { signIn } from "next-auth/react";
 import { ConfirmWriteCard } from "./ConfirmWriteCard";
@@ -21,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, Paperclip, X } from "lucide-react";
 
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
 
@@ -74,7 +75,13 @@ export function ChatClient({ viewContext, onWriteComplete }: {
   const [input, setInput] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   // timeZone rides the transport body so EVERY request carries it — including the
   // sendAutomaticallyWhen-triggered resubmit after addToolOutput, which sends no
@@ -143,19 +150,45 @@ export function ChatClient({ viewContext, onWriteComplete }: {
     }
   }
 
-  function send(text: string) {
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!f) return;
+    if (!f.type.startsWith("image/")) { setAttachError("Please choose an image."); return; }
+    if (f.size > 5 * 1024 * 1024) { setAttachError("That image is too large (max 5 MB)."); return; }
+    setAttachError(null);
+    setFile(f);
+  }
+
+  function fileToDataUrl(f: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => reject(new Error("read failed"));
+      r.readAsDataURL(f);
+    });
+  }
+
+  async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || busy || pendingWrite) return;
-    setInput("");
-    setNeedsSignIn(false);
-    void sendMessage({ text: trimmed });
+    if ((!trimmed && !file) || busy || pendingWrite) return;
+    const current = file;
+    setInput(""); setFile(null); setAttachError(null); setNeedsSignIn(false);
+    if (current) {
+      const url = await fileToDataUrl(current);
+      const files: FileUIPart[] = [{ type: "file", mediaType: current.type, url, filename: current.name }];
+      void sendMessage(trimmed ? { text: trimmed, files } : { files });
+    } else {
+      void sendMessage({ text: trimmed });
+    }
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    send(input);
+    void send(input);
   }
 
+  const canSend = !busy && !pendingWrite && (Boolean(input.trim()) || Boolean(file));
   const empty = messages.length === 0 && !busy;
 
   return (
@@ -193,6 +226,12 @@ export function ChatClient({ viewContext, onWriteComplete }: {
                   {!isUser && <AssistantAvatar />}
                   <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-2", isUser ? "items-end" : "items-start")}>
                     {m.parts.map((part, i) => {
+                      if (part.type === "file" && part.mediaType?.startsWith("image/")) {
+                        return (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={i} src={part.url} alt={part.filename ?? "attached image"} className="max-h-48 rounded-2xl border object-cover" />
+                        );
+                      }
                       if (part.type === "text") {
                         return isUser ? (
                           <span key={i} className="inline-block whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm text-primary-foreground">
@@ -268,18 +307,48 @@ export function ChatClient({ viewContext, onWriteComplete }: {
             </AlertDescription>
           </Alert>
         )}
+        {attachError && <p className="text-xs text-destructive">{attachError}</p>}
+        {previewUrl && (
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewUrl} alt="attachment preview" className="h-14 w-14 rounded-lg border object-cover" />
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                aria-label="Remove image"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border bg-background text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground">Image attached</span>
+          </div>
+        )}
         <form onSubmit={submit} className="relative">
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Attach image"
+            disabled={busy || pendingWrite}
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute left-1.5 top-1.5 h-9 w-9 rounded-full"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={busy || pendingWrite}
-            placeholder="Message Cadence…"
-            className="h-12 rounded-full pr-12"
+            placeholder="Message Cadence… or attach a photo"
+            className="h-12 rounded-full pl-12 pr-12"
           />
           <Button
             type="submit"
             size="icon"
-            disabled={busy || pendingWrite || !input.trim()}
+            disabled={!canSend}
             aria-label="Send"
             className="absolute right-1.5 top-1.5 h-9 w-9 rounded-full"
           >

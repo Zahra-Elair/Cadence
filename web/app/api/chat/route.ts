@@ -1,10 +1,11 @@
 import { streamText, smoothStream, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { auth } from "@/auth";
 import { getGoogleAccessToken } from "@/lib/auth-token";
-import { resolveModel, ProviderConfigError, GENERATION_PROVIDER_OPTIONS } from "@/lib/ai/provider";
+import { resolveModel, resolveVisionModel, ProviderConfigError, GENERATION_PROVIDER_OPTIONS } from "@/lib/ai/provider";
 import { isQuota, isOverload } from "@/lib/ai/errors";
 import { buildTools } from "@/lib/chat/tools";
 import { buildSystem } from "@/lib/chat/system";
+import { hasImageAttachment } from "@/lib/chat/images";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -20,12 +21,20 @@ export async function POST(req: Request) {
   }
   const { messages, timeZone, viewContext } = body;
 
+  // Messages carrying an image go to a vision model (Gemini); text stays on the
+  // configured text provider.
+  const useVision = hasImageAttachment(messages);
   let model: ReturnType<typeof resolveModel>;
   try {
-    model = resolveModel();
+    model = useVision ? resolveVisionModel() : resolveModel();
   } catch (err) {
     if (err instanceof ProviderConfigError)
-      return new Response("The assistant isn't configured on the server (missing or invalid AI provider settings).", { status: 500 });
+      return new Response(
+        useVision
+          ? "Image understanding isn't configured on the server (missing GEMINI_API_KEY)."
+          : "The assistant isn't configured on the server (missing or invalid AI provider settings).",
+        { status: 500 },
+      );
     throw err;
   }
 

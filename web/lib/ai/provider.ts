@@ -70,6 +70,25 @@ export function resolveModel(): LanguageModel {
 }
 
 /**
+ * A vision-capable model for messages that include an image, independent of the
+ * text AI_PROVIDER. Uses Google Gemini (multimodal) via GEMINI_API_KEY, so text
+ * chat can stay on a text-only provider (e.g. Groq) while images route here.
+ * Override the model id with VISION_MODEL.
+ */
+export function resolveVisionModel(): LanguageModel {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new ProviderConfigError(
+      "missing-key",
+      "google",
+      "Missing GEMINI_API_KEY — image understanding needs a Google (Gemini) key.",
+    );
+  }
+  const modelId = process.env.VISION_MODEL?.trim() || "gemini-flash-latest";
+  return PROVIDERS.google.make(apiKey, modelId);
+}
+
+/**
  * Provider-specific generation options, namespaced by provider (a provider
  * ignores keys that aren't its own). Groq's reasoning models (gpt-oss, qwen3)
  * otherwise emit their chain-of-thought inline into the reply; "hidden" keeps
