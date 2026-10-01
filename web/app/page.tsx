@@ -106,6 +106,7 @@ export default async function Home() {
           <div className="flex items-center gap-4">
             <span>AI summaries &amp; chat for Google Calendar · Your data isn&rsquo;t sold or mined.</span>
             <Link href="/privacy" className="shrink-0 hover:text-foreground">Privacy</Link>
+            <Link href="/terms" className="shrink-0 hover:text-foreground">Terms</Link>
           </div>
         </div>
       </footer>

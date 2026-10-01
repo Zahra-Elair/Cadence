@@ -106,7 +106,10 @@ export default function PrivacyPage() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-6 text-sm text-muted-foreground">
           <span className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-primary" /> Cadence</span>
-          <Link href="/" className="hover:text-foreground">Home</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-foreground">Terms</Link>
+            <Link href="/" className="hover:text-foreground">Home</Link>
+          </div>
         </div>
       </footer>
     </div>
