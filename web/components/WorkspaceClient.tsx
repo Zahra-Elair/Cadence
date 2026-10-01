@@ -6,7 +6,7 @@ import type { CalendarEvent } from "@/lib/calendar/layout";
 import { fetchCalendarWeek } from "@/lib/calendar-actions";
 import { WeekGrid } from "./WeekGrid";
 import { EventDialog } from "./EventDialog";
-import { BriefBar } from "./BriefBar";
+import { NowNextBar } from "./NowNextBar";
 import { ChatClient } from "./ChatClient";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,6 +38,7 @@ export function WorkspaceClient() {
   const [selectedDayISO, setSelectedDayISO] = useState<string | undefined>(undefined);
   const [dockOpen, setDockOpen] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const reqId = useRef(0);
@@ -65,16 +66,19 @@ export function WorkspaceClient() {
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [weekStartISO]);
   useEffect(() => { setSelectedDayISO(undefined); }, [weekStartISO]);
 
+  // Refetch the viewed week AND nudge the Now/Next bar after a write.
+  function reloadAll() { void load(); setRefreshKey((k) => k + 1); }
+
   const rangeLabel = `${anchor.toFormat("d LLL")} – ${anchor.plus({ days: 6 }).toFormat("d LLL yyyy")}`;
   const viewContext = useMemo(() => ({ weekStartISO, selectedDayISO }), [weekStartISO, selectedDayISO]);
 
   if (!mounted) return <div className="h-[70vh] animate-pulse rounded-xl border" />;
 
-  const chat = <ChatClient viewContext={viewContext} onWriteComplete={load} />;
+  const chat = <ChatClient viewContext={viewContext} onWriteComplete={reloadAll} />;
 
   return (
     <div className="space-y-4">
-      <BriefBar anchorISODate={anchorISODate} todayISODate={todayISODate} zone={zone} />
+      <NowNextBar zone={zone} refreshKey={refreshKey} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -148,7 +152,7 @@ export function WorkspaceClient() {
           timeZone={zone}
           initial={{ event: dialog.event, dayISODate: dialog.dayISODate, hour: dialog.hour }}
           onClose={() => setDialog(null)}
-          onSaved={load}
+          onSaved={reloadAll}
         />
       )}
     </div>
