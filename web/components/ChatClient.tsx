@@ -66,7 +66,10 @@ function TypingDots() {
   );
 }
 
-export function ChatClient() {
+export function ChatClient({ viewContext, onWriteComplete }: {
+  viewContext?: { weekStartISO?: string; selectedDayISO?: string };
+  onWriteComplete?: () => void;
+} = {}) {
   const zone = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
   const [input, setInput] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
@@ -76,7 +79,10 @@ export function ChatClient() {
   // timeZone rides the transport body so EVERY request carries it — including the
   // sendAutomaticallyWhen-triggered resubmit after addToolOutput, which sends no
   // per-call options. useMemo keyed on zone keeps the transport identity stable.
-  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat", body: { timeZone: zone } }), [zone]);
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: "/api/chat", body: { timeZone: zone, viewContext } }),
+    [zone, viewContext?.weekStartISO, viewContext?.selectedDayISO],
+  );
 
   // sendAutomaticallyWhen is REQUIRED: after addToolOutput records the confirmed
   // write result, this resubmits the conversation so the assistant streams its
@@ -109,6 +115,7 @@ export function ChatClient() {
     // resubmits so the assistant narrates the outcome. A confirmed write is never
     // re-prompted: the part leaves input-available once output is recorded.
     await addToolOutput({ tool, toolCallId, output: res.ok ? res.output : { error: res.error } });
+    onWriteComplete?.();
   }
 
   async function onCancel(tool: ToolName, toolCallId: string) {
@@ -127,6 +134,7 @@ export function ChatClient() {
       await addToolOutput({ tool: it.tool, toolCallId: it.toolCallId, output: res.ok ? res.output : { error: res.error } });
     }
     setConfirmBusy(false);
+    onWriteComplete?.();
   }
 
   async function onCancelAll(items: WriteItem[]) {
