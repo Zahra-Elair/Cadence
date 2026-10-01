@@ -12,13 +12,13 @@ export async function POST(req: Request) {
   const token = await getGoogleAccessToken();
   if (!token) return new Response("Your session expired. Please sign in again.", { status: 401 });
 
-  let body: { messages: UIMessage[]; timeZone: string };
+  let body: { messages: UIMessage[]; timeZone: string; viewContext?: { weekStartISO?: string; selectedDayISO?: string } };
   try {
-    body = (await req.json()) as { messages: UIMessage[]; timeZone: string };
+    body = (await req.json()) as { messages: UIMessage[]; timeZone: string; viewContext?: { weekStartISO?: string; selectedDayISO?: string } };
   } catch {
     return new Response("Invalid request body.", { status: 400 });
   }
-  const { messages, timeZone } = body;
+  const { messages, timeZone, viewContext } = body;
 
   let model: ReturnType<typeof resolveModel>;
   try {
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model,
-    system: buildSystem(timeZone ?? "UTC"),
+    system: buildSystem(timeZone ?? "UTC", viewContext),
     messages: await convertToModelMessages(messages),
     tools: buildTools(token, timeZone ?? "UTC"),
     stopWhen: stepCountIs(8),
