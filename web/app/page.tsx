@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { CalendarClock, MessageSquareText, ShieldCheck, LayoutGrid, Sparkles, LogIn } from "lucide-react";
 import { auth } from "@/auth";
 import { SignInButton } from "@/components/SignInButton";
@@ -102,7 +103,10 @@ export default async function Home() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
           <span className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-primary" /> Cadence</span>
-          <span>AI summaries &amp; chat for Google Calendar · Your data isn&rsquo;t sold or mined.</span>
+          <div className="flex items-center gap-4">
+            <span>AI summaries &amp; chat for Google Calendar · Your data isn&rsquo;t sold or mined.</span>
+            <Link href="/privacy" className="shrink-0 hover:text-foreground">Privacy</Link>
+          </div>
         </div>
       </footer>
     </div>
