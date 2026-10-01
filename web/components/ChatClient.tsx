@@ -255,7 +255,7 @@ export function ChatClient({ viewContext, onWriteComplete }: {
             <AlertDescription className="flex items-center justify-between gap-3">
               <span>{error.message}</span>
               {needsSignIn && (
-                <Button size="sm" onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
+                <Button size="sm" onClick={() => signIn("google", { redirectTo: "/app" })}>Sign in with Google</Button>
               )}
             </AlertDescription>
           </Alert>
@@ -264,7 +264,7 @@ export function ChatClient({ viewContext, onWriteComplete }: {
           <Alert variant="destructive">
             <AlertDescription className="flex items-center justify-between gap-3">
               <span>Your Google session or calendar permission needs a refresh.</span>
-              <Button size="sm" onClick={() => signIn("google", { redirectTo: "/dashboard" })}>Sign in with Google</Button>
+              <Button size="sm" onClick={() => signIn("google", { redirectTo: "/app" })}>Sign in with Google</Button>
             </AlertDescription>
           </Alert>
         )}

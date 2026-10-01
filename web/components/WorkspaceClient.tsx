@@ -10,7 +10,7 @@ import { BriefBar } from "./BriefBar";
 import { ChatClient } from "./ChatClient";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { ChevronLeft, ChevronRight, Plus, MessageSquareText, PanelRightClose, PanelRightOpen } from "lucide-react";
 
 type DialogState = { mode: "create" | "edit"; event?: CalendarEvent; dayISODate?: string; hour?: number } | null;
@@ -51,13 +51,19 @@ export function WorkspaceClient() {
   async function load() {
     const id = ++reqId.current;
     setLoading(true); setError(null); setNeedsSignIn(false);
-    const res = await fetchCalendarWeek(weekStartISO, zone);
-    if (id !== reqId.current) return;
-    setLoading(false);
-    if (res.ok) setEvents(res.events);
-    else { setError(res.error); setNeedsSignIn(Boolean(res.needsSignIn)); }
+    try {
+      const res = await fetchCalendarWeek(weekStartISO, zone);
+      if (id !== reqId.current) return;
+      if (res.ok) setEvents(res.events);
+      else { setError(res.error); setNeedsSignIn(Boolean(res.needsSignIn)); }
+    } catch {
+      if (id === reqId.current) setError("Couldn't load your calendar. Please try again.");
+    } finally {
+      if (id === reqId.current) setLoading(false);
+    }
   }
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [weekStartISO]);
+  useEffect(() => { setSelectedDayISO(undefined); }, [weekStartISO]);
 
   const rangeLabel = `${anchor.toFormat("d LLL")} – ${anchor.plus({ days: 6 }).toFormat("d LLL yyyy")}`;
   const viewContext = useMemo(() => ({ weekStartISO, selectedDayISO }), [weekStartISO, selectedDayISO]);
@@ -128,6 +134,7 @@ export function WorkspaceClient() {
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[85vh] p-4">
             <SheetTitle className="mb-2 text-base">Assistant</SheetTitle>
+            <SheetDescription className="sr-only">Chat with the Cadence assistant to view or change your calendar.</SheetDescription>
             {chat}
           </SheetContent>
         </Sheet>

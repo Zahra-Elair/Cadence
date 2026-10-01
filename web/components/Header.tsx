@@ -10,7 +10,7 @@ export function Header({ user }: { user: { name?: string | null; email?: string 
   const initials = (user.name ?? user.email ?? "?").slice(0, 1).toUpperCase();
   return (
     <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link href="/app" className="flex items-center gap-2 font-medium">
           <CalendarClock className="h-5 w-5 text-primary" />
           <span className="hidden sm:inline">Cadence</span>
