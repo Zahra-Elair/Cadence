@@ -20,7 +20,7 @@ const STEPS = [
 
 export default async function Home() {
   const session = await auth();
-  if (session) redirect("/dashboard");
+  if (session) redirect("/app");
 
   return (
     <div className="flex min-h-full flex-col">
