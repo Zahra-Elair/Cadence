@@ -69,23 +69,42 @@ export function resolveModel(): LanguageModel {
   return spec.make(apiKey, modelId);
 }
 
+/** Default vision model per provider — must be BOTH multimodal AND tool-capable
+ *  (it reads the image and calls create_event). Override with VISION_MODEL. */
+const DEFAULT_VISION_MODEL: Record<string, string> = {
+  // Llama 4 Maverick: multimodal + tool calling, free tier on OpenRouter.
+  openrouter: "meta-llama/llama-4-maverick:free",
+  google: "gemini-flash-latest",
+  mistral: "pixtral-12b-latest",
+};
+
 /**
  * A vision-capable model for messages that include an image, independent of the
- * text AI_PROVIDER. Uses Google Gemini (multimodal) via GEMINI_API_KEY, so text
- * chat can stay on a text-only provider (e.g. Groq) while images route here.
- * Override the model id with VISION_MODEL.
+ * text AI_PROVIDER — so text chat can stay on a text-only provider (e.g. Groq)
+ * while images route here. Defaults to OpenRouter; override with VISION_PROVIDER
+ * (google | mistral | openrouter) and VISION_MODEL. The model must support BOTH
+ * images and tool calling.
  */
 export function resolveVisionModel(): LanguageModel {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const name = process.env.VISION_PROVIDER?.trim() || "openrouter";
+  const spec = Object.hasOwn(PROVIDERS, name) ? PROVIDERS[name] : undefined;
+  if (!spec) {
+    throw new ProviderConfigError(
+      "unknown-provider",
+      name,
+      `Unknown VISION_PROVIDER "${name}". Supported: ${Object.keys(PROVIDERS).join(", ")}.`,
+    );
+  }
+  const apiKey = process.env[spec.envKey];
   if (!apiKey) {
     throw new ProviderConfigError(
       "missing-key",
-      "google",
-      "Missing GEMINI_API_KEY — image understanding needs a Google (Gemini) key.",
+      name,
+      `Missing ${spec.envKey} for VISION_PROVIDER "${name}".`,
     );
   }
-  const modelId = process.env.VISION_MODEL?.trim() || "gemini-flash-latest";
-  return PROVIDERS.google.make(apiKey, modelId);
+  const modelId = process.env.VISION_MODEL?.trim() || DEFAULT_VISION_MODEL[name] || spec.defaultModel;
+  return spec.make(apiKey, modelId);
 }
 
 /**

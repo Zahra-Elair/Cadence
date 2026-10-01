@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     if (err instanceof ProviderConfigError)
       return new Response(
         useVision
-          ? "Image understanding isn't configured on the server (missing GEMINI_API_KEY)."
+          ? "Image understanding isn't configured on the server (missing the vision provider's API key)."
           : "The assistant isn't configured on the server (missing or invalid AI provider settings).",
         { status: 500 },
       );
