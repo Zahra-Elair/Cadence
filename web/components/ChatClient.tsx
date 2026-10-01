@@ -58,7 +58,7 @@ function AssistantAvatar() {
 
 function TypingDots() {
   return (
-    <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm bg-muted px-4 py-3">
+    <div className="flex items-center gap-1 py-2">
       {["0s", "0.15s", "0.3s"].map((d) => (
         <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: d }} />
       ))}
@@ -187,11 +187,11 @@ export function ChatClient() {
                     {m.parts.map((part, i) => {
                       if (part.type === "text") {
                         return isUser ? (
-                          <span key={i} className="inline-block whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm text-primary-foreground">
+                          <span key={i} className="whitespace-pre-wrap break-words text-right text-sm font-medium text-foreground">
                             {part.text}
                           </span>
                         ) : (
-                          <div key={i} className="max-w-full overflow-x-auto rounded-2xl rounded-tl-sm bg-muted px-4 py-2 text-sm text-foreground">
+                          <div key={i} className="max-w-full overflow-x-auto text-sm text-foreground">
                             <Markdown>{part.text}</Markdown>
                           </div>
                         );
