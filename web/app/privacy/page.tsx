@@ -9,7 +9,7 @@ export const metadata = {
 const UPDATED = "1 October 2026";
 // TODO: replace with the contact email you want shown publicly (can match the
 // developer contact on your Google OAuth consent screen).
-const CONTACT = "your-contact-email@example.com";
+const CONTACT = "zahraelair17@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
