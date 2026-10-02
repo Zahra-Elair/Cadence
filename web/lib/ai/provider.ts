@@ -76,11 +76,12 @@ export function resolveModel(): LanguageModel {
 // `models` fallback array — it tries them in order and skips any that are
 // rate-limited/unavailable, instead of betting on one. VISION_MODEL (if set) is
 // tried first. Refresh from https://openrouter.ai/api/v1/models if these churn.
+// OpenRouter caps the `models` fallback array at 3; keep three on distinct
+// upstream providers for the best chance one is up.
 const OPENROUTER_VISION_FALLBACKS = [
   "google/gemma-4-31b-it:free",
   "qwen/qwen3.8-27b:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "google/gemma-4-26b-a4b-it:free",
 ];
 
 /** Default vision model for non-OpenRouter providers (single model). */
@@ -117,7 +118,8 @@ export function resolveVisionModel(): LanguageModel {
   const override = process.env.VISION_MODEL?.trim();
   if (name === "openrouter") {
     // Send a fallback basket so OpenRouter skips rate-limited free models.
-    const models = [...new Set([override, ...OPENROUTER_VISION_FALLBACKS].filter(Boolean) as string[])];
+    // OpenRouter allows at most 3 models in the fallback array.
+    const models = [...new Set([override, ...OPENROUTER_VISION_FALLBACKS].filter(Boolean) as string[])].slice(0, 3);
     return createOpenRouter({ apiKey }).chat(models[0], { extraBody: { models } });
   }
   const modelId = override || DEFAULT_VISION_MODEL[name] || spec.defaultModel;
