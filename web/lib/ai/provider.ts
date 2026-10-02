@@ -71,12 +71,20 @@ export function resolveModel(): LanguageModel {
 
 /** Default vision model per provider — must be BOTH multimodal AND tool-capable
  *  (it reads the image and calls create_event). Override with VISION_MODEL. */
+// Free OpenRouter models that do BOTH image input AND tool calling. They share
+// heavily rate-limited upstream pools, so we send the whole list as OpenRouter's
+// `models` fallback array — it tries them in order and skips any that are
+// rate-limited/unavailable, instead of betting on one. VISION_MODEL (if set) is
+// tried first. Refresh from https://openrouter.ai/api/v1/models if these churn.
+const OPENROUTER_VISION_FALLBACKS = [
+  "google/gemma-4-31b-it:free",
+  "qwen/qwen3.8-27b:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "google/gemma-4-26b-a4b-it:free",
+];
+
+/** Default vision model for non-OpenRouter providers (single model). */
 const DEFAULT_VISION_MODEL: Record<string, string> = {
-  // Free model with image input AND tool calling. OpenRouter's free catalog
-  // churns, so override with VISION_MODEL if this id stops being free; current
-  // free image+tools alternatives: qwen/qwen3.8-27b:free,
-  // nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free.
-  openrouter: "google/gemma-4-31b-it:free",
   google: "gemini-flash-latest",
   mistral: "pixtral-12b-latest",
 };
@@ -106,7 +114,13 @@ export function resolveVisionModel(): LanguageModel {
       `Missing ${spec.envKey} for VISION_PROVIDER "${name}".`,
     );
   }
-  const modelId = process.env.VISION_MODEL?.trim() || DEFAULT_VISION_MODEL[name] || spec.defaultModel;
+  const override = process.env.VISION_MODEL?.trim();
+  if (name === "openrouter") {
+    // Send a fallback basket so OpenRouter skips rate-limited free models.
+    const models = [...new Set([override, ...OPENROUTER_VISION_FALLBACKS].filter(Boolean) as string[])];
+    return createOpenRouter({ apiKey }).chat(models[0], { extraBody: { models } });
+  }
+  const modelId = override || DEFAULT_VISION_MODEL[name] || spec.defaultModel;
   return spec.make(apiKey, modelId);
 }
 
