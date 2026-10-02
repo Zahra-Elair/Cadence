@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { Send, Paperclip, X, SquarePen, Bot } from "lucide-react";
+import { Send, Paperclip, X, SquarePen } from "lucide-react";
 
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
 
@@ -54,10 +54,26 @@ function looksLikeAuthError(message: string): boolean {
   return m.includes("sign in") || m.includes("session expired") || m.includes("session or calendar permission");
 }
 
+/** Original friendly robot — antenna, rounded head with ears, two eyes, a smile. */
+function RobotIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="3.2" />
+      <circle cx="12" cy="2.4" r="1" fill="currentColor" stroke="none" />
+      <rect x="4.5" y="5" width="15" height="13" rx="4" />
+      <rect x="2.4" y="9.6" width="2.1" height="4.8" rx="1.05" />
+      <rect x="19.5" y="9.6" width="2.1" height="4.8" rx="1.05" />
+      <circle cx="9.3" cy="11" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="14.7" cy="11" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M9.3 14.3 Q12 16 14.7 14.3" />
+    </svg>
+  );
+}
+
 function AssistantAvatar() {
   return (
     <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-      <Bot className="h-5 w-5" />
+      <RobotIcon className="h-5 w-5" />
     </div>
   );
 }
@@ -242,7 +258,7 @@ export function ChatClient({ viewContext, onWriteComplete }: {
         {empty ? (
           <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-5 px-2 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Bot className="h-7 w-7" />
+              <RobotIcon className="h-7 w-7" />
             </div>
             <div className="space-y-1">
               <p className="text-lg font-medium">How can I help with your calendar?</p>
