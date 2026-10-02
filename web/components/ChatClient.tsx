@@ -16,6 +16,7 @@ import { BatchConfirmWriteCard, type WriteItem } from "./BatchConfirmWriteCard";
 import { WriteTrace } from "./WriteTrace";
 import { Markdown } from "./Markdown";
 import { WRITE_TOOLS, type ToolName } from "@/lib/chat/types";
+import { stripImageParts } from "@/lib/chat/images";
 import { executeWrite } from "@/lib/chat-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,10 @@ import { cn } from "@/lib/utils";
 import { Send, Sparkles, Paperclip, X } from "lucide-react";
 
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
+
+// Persist the conversation per browser-tab session so collapsing/reopening the
+// chat (or crossing the mobile breakpoint, or a reload) doesn't lose it.
+const CHAT_STORAGE_KEY = "cadence-chat-session";
 
 const SUGGESTIONS = [
   "What's on today?",
@@ -94,10 +99,32 @@ export function ChatClient({ viewContext, onWriteComplete }: {
   // sendAutomaticallyWhen is REQUIRED: after addToolOutput records the confirmed
   // write result, this resubmits the conversation so the assistant streams its
   // follow-up narration. Without it, nothing continues after a confirm.
-  const { messages, sendMessage, addToolOutput, status, error } = useChat({
+  const { messages, sendMessage, addToolOutput, setMessages, status, error } = useChat({
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
+
+  // Restore a saved conversation once on mount.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(CHAT_STORAGE_KEY);
+      const saved = raw ? (JSON.parse(raw) as UIMessage[]) : null;
+      if (Array.isArray(saved) && saved.length) setMessages(saved);
+    } catch { /* storage unavailable or corrupt — start fresh */ }
+  }, [setMessages]);
+
+  // Save on every change (fall back to stripping image blobs if over quota).
+  useEffect(() => {
+    if (messages.length === 0) return;
+    try {
+      sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      try { sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(stripImageParts(messages))); } catch { /* give up */ }
+    }
+  }, [messages]);
 
   const busy = status === "submitted" || status === "streaming";
 
