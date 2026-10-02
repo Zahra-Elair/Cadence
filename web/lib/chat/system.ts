@@ -7,6 +7,7 @@ export function buildSystem(
   const now = DateTime.now().setZone(timeZone).isValid ? DateTime.now().setZone(timeZone) : DateTime.now();
   const nowStr = now.toISO()!;
   const todayStr = now.toFormat("cccc, d LLLL yyyy");
+  const upcoming = Array.from({ length: 14 }, (_, i) => now.plus({ days: i + 1 }).toFormat("EEE d LLL")).join(", ");
 
   let viewLine = "";
   if (viewContext?.weekStartISO) {
@@ -24,6 +25,7 @@ export function buildSystem(
   return (
     `You are a helpful calendar assistant. The user's timezone is ${timeZone}. Today is ${todayStr}; the current local time is ${nowStr}. ` +
     `Whenever you mention a date in your replies, use today's date above as the reference and ALWAYS use the current year ${now.year} — never write a past year such as 2024. ` +
+    `Date reference — resolve weekday names and relative dates ("tomorrow", "this/next <weekday>") by MATCHING this list, not by computing dates yourself: today is ${now.toFormat("EEE d LLL")}; the next days are ${upcoming}. So e.g. the first "${now.plus({ days: 1 }).toFormat("EEE")}" in that list is ${now.plus({ days: 1 }).toFormat("d LLL")}. ` +
     `Times returned by list_events are already in the user's timezone — read and display them as-is; never shift them by the offset yourself. ` +
     `Resolve relative dates (e.g. "Thursday 1pm") to concrete ISO 8601 datetimes WITH the user's timezone offset. ` +
     `Use the recent conversation to fill in an unspecified day — e.g. if the user was just discussing tomorrow and then says "add X at 5pm", assume tomorrow. ` +
