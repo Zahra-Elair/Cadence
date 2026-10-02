@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { Send, Sparkles, Paperclip, X } from "lucide-react";
+import { Send, Paperclip, X, SquarePen } from "lucide-react";
 
 const isWriteTool = (name: string): name is ToolName => (WRITE_TOOLS as string[]).includes(name);
 
@@ -54,10 +54,20 @@ function looksLikeAuthError(message: string): boolean {
   return m.includes("sign in") || m.includes("session expired") || m.includes("session or calendar permission");
 }
 
+/** A little "AI dot" face — a filled violet dot with two eyes. */
+function BotFace({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <circle cx="9" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="15" cy="12" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
 function AssistantAvatar() {
   return (
-    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-      <Sparkles className="h-4 w-4" />
+    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <BotFace className="h-5 w-5" />
     </div>
   );
 }
@@ -215,16 +225,34 @@ export function ChatClient({ viewContext, onWriteComplete }: {
     void send(input);
   }
 
+  function newChat() {
+    setMessages([]);
+    setInput(""); setFile(null); setAttachError(null); setNeedsSignIn(false);
+    try { sessionStorage.removeItem(CHAT_STORAGE_KEY); } catch { /* ignore */ }
+  }
+
   const canSend = !busy && !pendingWrite && (Boolean(input.trim()) || Boolean(file));
   const empty = messages.length === 0 && !busy;
 
   return (
     <div className="flex h-[70vh] flex-col">
+      {messages.length > 0 && (
+        <div className="flex justify-end pb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={newChat}
+            className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <SquarePen className="h-3.5 w-3.5" /> New chat
+          </Button>
+        </div>
+      )}
       <ScrollArea className="min-h-0 flex-1 py-5">
         {empty ? (
           <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-5 px-2 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Sparkles className="h-6 w-6" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <BotFace className="h-7 w-7" />
             </div>
             <div className="space-y-1">
               <p className="text-lg font-medium">How can I help with your calendar?</p>
