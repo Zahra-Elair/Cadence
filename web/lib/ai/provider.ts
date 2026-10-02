@@ -72,8 +72,11 @@ export function resolveModel(): LanguageModel {
 /** Default vision model per provider — must be BOTH multimodal AND tool-capable
  *  (it reads the image and calls create_event). Override with VISION_MODEL. */
 const DEFAULT_VISION_MODEL: Record<string, string> = {
-  // Llama 4 Maverick: multimodal + tool calling, free tier on OpenRouter.
-  openrouter: "meta-llama/llama-4-maverick:free",
+  // Free model with image input AND tool calling. OpenRouter's free catalog
+  // churns, so override with VISION_MODEL if this id stops being free; current
+  // free image+tools alternatives: qwen/qwen3.8-27b:free,
+  // nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free.
+  openrouter: "google/gemma-4-31b-it:free",
   google: "gemini-flash-latest",
   mistral: "pixtral-12b-latest",
 };
