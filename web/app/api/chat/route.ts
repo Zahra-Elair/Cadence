@@ -5,7 +5,7 @@ import { resolveModel, resolveVisionModel, ProviderConfigError, GENERATION_PROVI
 import { isQuota, isOverload } from "@/lib/ai/errors";
 import { buildTools } from "@/lib/chat/tools";
 import { buildSystem } from "@/lib/chat/system";
-import { hasImageAttachment } from "@/lib/chat/images";
+import { hasImageAttachment, stripImageParts } from "@/lib/chat/images";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -38,10 +38,14 @@ export async function POST(req: Request) {
     throw err;
   }
 
+  // Text turns go to the text model with history images stripped (it can't read
+  // them, and the vision model already transcribed them into the conversation).
+  const modelMessages = await convertToModelMessages(useVision ? messages : stripImageParts(messages));
+
   const result = streamText({
     model,
     system: buildSystem(timeZone ?? "UTC", viewContext),
-    messages: await convertToModelMessages(messages),
+    messages: modelMessages,
     tools: buildTools(token, timeZone ?? "UTC"),
     stopWhen: stepCountIs(8),
     providerOptions: GENERATION_PROVIDER_OPTIONS,
