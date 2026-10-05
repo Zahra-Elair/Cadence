@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock } from "lucide-react";
+import { CadenceMark } from "@/components/CadenceMark";
 
 export const metadata = {
   title: "Terms of Service — Cadence",
@@ -24,7 +24,7 @@ export default function TermsPage() {
       <header className="border-b">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <CalendarClock className="h-5 w-5 text-primary" /> Cadence
+            <CadenceMark className="h-5 w-5 text-primary" /> Cadence
           </Link>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
         </div>
@@ -122,7 +122,7 @@ export default function TermsPage() {
 
       <footer className="border-t">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-6 text-sm text-muted-foreground">
-          <span className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-primary" /> Cadence</span>
+          <span className="flex items-center gap-2"><CadenceMark className="h-4 w-4 text-primary" /> Cadence</span>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
             <Link href="/" className="hover:text-foreground">Home</Link>

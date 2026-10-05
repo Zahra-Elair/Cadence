@@ -5,6 +5,8 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { Header } from "@/components/Header";
 import { WorkspaceClient } from "@/components/WorkspaceClient";
 
+export const metadata = { title: "Workspace" };
+
 export default async function AppPage() {
   const session = await auth();
   if (!session) redirect("/");

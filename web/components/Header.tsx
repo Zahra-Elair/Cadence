@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { CalendarClock } from "lucide-react";
+import { CadenceMark } from "./CadenceMark";
 import { signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -12,7 +12,7 @@ export function Header({ user }: { user: { name?: string | null; email?: string 
     <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link href="/app" className="flex items-center gap-2 font-medium">
-          <CalendarClock className="h-5 w-5 text-primary" />
+          <CadenceMark className="h-5 w-5 text-primary" />
           <span className="hidden sm:inline">Cadence</span>
         </Link>
         <nav className="flex items-center gap-1">
