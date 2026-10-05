@@ -20,11 +20,9 @@ export default function OpengraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 40 }}>
-          <div style={{ width: 24, height: 44, borderRadius: 9, background: "#8b6dff" }} />
-          <div style={{ width: 24, height: 72, borderRadius: 9, background: "#8b6dff" }} />
-          <div style={{ width: 24, height: 100, borderRadius: 9, background: "#8b6dff" }} />
-        </div>
+        <svg width="120" height="120" viewBox="0 0 32 32" style={{ marginBottom: 32 }}>
+          <path d="M21.8 9.8 A8.5 8.5 0 1 0 21.8 22.2" fill="none" stroke="#8b6dff" strokeWidth={4} strokeLinecap="round" />
+        </svg>
         <div style={{ fontSize: 92, fontWeight: 700, letterSpacing: -3 }}>Cadence</div>
         <div style={{ fontSize: 40, color: "#b9b2d6", marginTop: 20, maxWidth: 940, lineHeight: 1.3 }}>
           Your Google Calendar, on command — chat or snap a photo, and it schedules it for you.
