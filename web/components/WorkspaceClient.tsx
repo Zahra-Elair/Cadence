@@ -90,7 +90,7 @@ export function WorkspaceClient() {
             aria-label="Jump to a date"
             value={anchorISODate}
             onChange={(e) => { const d = DateTime.fromISO(e.target.value, { zone }); if (d.isValid) setAnchor(d.startOf("week")); }}
-            className="ml-1 h-9 rounded-md border bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:light] dark:[color-scheme:dark]"
+            className="ml-1 h-9 rounded-md border bg-background px-2.5 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:light] md:text-sm dark:[color-scheme:dark]"
           />
           <span className="ml-1 text-sm font-medium">{rangeLabel}</span>
         </div>
