@@ -63,7 +63,7 @@ export function EventDialog({ open, mode, initial, timeZone, onClose, onSaved }:
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader><DialogTitle>{mode === "create" ? "New event" : "Edit event"}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <div className="space-y-1"><Label>Title</Label><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Event title" /></div>
           <div className="space-y-1"><Label>Date</Label><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

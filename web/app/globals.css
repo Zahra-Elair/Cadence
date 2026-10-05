@@ -128,4 +128,9 @@
   html {
     @apply font-sans;
   }
+  /* Native date/time pickers can overflow their container on iOS — cap them. */
+  input[type="date"],
+  input[type="time"] {
+    max-width: 100%;
+  }
 }
