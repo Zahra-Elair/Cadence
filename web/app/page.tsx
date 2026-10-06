@@ -28,7 +28,7 @@ export default async function Home() {
       <header className="sticky top-0 z-20 border-b bg-background/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <span className="flex items-center gap-2 font-semibold tracking-tight">
-            <CadenceMark className="h-5 w-5 text-primary" /> Cadence
+            <CadenceMark className="h-8 w-8" /> Cadence
           </span>
           <div className="flex items-center gap-1">
             <ThemeToggle />
@@ -103,7 +103,7 @@ export default async function Home() {
 
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
-          <span className="flex items-center gap-2"><CadenceMark className="h-4 w-4 text-primary" /> Cadence</span>
+          <span className="flex items-center gap-2"><CadenceMark className="h-6 w-6" /> Cadence</span>
           <div className="flex items-center gap-4">
             <span>AI summaries &amp; chat for Google Calendar · Your data isn&rsquo;t sold or mined.</span>
             <Link href="/privacy" className="shrink-0 hover:text-foreground">Privacy</Link>
